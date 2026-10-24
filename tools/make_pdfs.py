@@ -13,7 +13,7 @@ CSS="""
 *{box-sizing:border-box}body{font:9.5pt/1.25 'Liberation Sans',Arial,Helvetica,sans-serif;color:#111;margin:0}
 h1{font-size:19pt;margin:0}.sub{color:#444;margin:1mm 0 2mm}
 .meta{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1.5pt solid #111;padding-bottom:2mm;margin-bottom:2.5mm}
-.fields{font-size:10pt}.fields span{display:inline-block;border-bottom:.7pt solid #111;width:34mm;margin:0 4mm 0 1.5mm}
+.legend{font-size:8pt;color:#333}.fields{font-size:10pt}.fields span{display:inline-block;border-bottom:.7pt solid #111;width:34mm;margin:0 4mm 0 1.5mm}
 .wu{border:.8pt solid #888;border-radius:2mm;padding:1.6mm 2.5mm;margin-bottom:2mm;font-size:9pt}
 .wu b{margin-right:2mm}.wu .it{display:inline-block;margin-right:5mm;white-space:nowrap}
 .cb{display:inline-block;width:3.2mm;height:3.2mm;border:.8pt solid #111;vertical-align:-.5mm;margin-right:1.2mm}
@@ -60,7 +60,7 @@ def page(sid,warm):
         wu=f"<div class='wu'><b>Échauffement 6 min</b>{items}</div>"
     w=f"<table><colgroup><col style='width:9mm'><col style='width:92mm'><col style='width:28mm'><col></colgroup><tr><th></th><th>Exercice</th><th>Objectif</th><th><div class='sets'>{heads.replace('th','div')}</div></th></tr>{body}</table>"
     return f"""<html><head><meta charset='utf-8'><style>{CSS}</style></head><body>
-<div class='meta'><div><h1>{e(s['title'])}</h1><div class='sub'>{e(s['sub'])}</div></div>
+<div class='meta'><div><h1>{e(s['title'])}</h1><div class='sub'>{e(s['sub'])}</div><div class='legend'>S1–S{maxn} = séries 1 à {maxn} (note les reps et les kg). Case grise = série non prévue. 2a / 2b = superset : alterne les deux exercices.</div></div>
 <div class='fields'>Date<span></span>Semaine<span style='width:14mm'></span></div></div>{wu}{w}
 <div class='foot'><span>Charge : laisse 2 reps en réserve. Toutes les séries au haut de la fourchette 2 séances de suite : +2.5–5 %. Douleur tendon ou articulation à 4/10 ou plus : saute l’exercice.</span><span>Gym Guide {e(ver)} · imprimé le {today}</span></div></body></html>"""
 files={'a':('seance-a.pdf',True),'b':('seance-b.pdf',True),'c':('seance-c.pdf',True),'home':('routine-maison.pdf',False)}
