@@ -42,7 +42,7 @@ function viewSettings(){
     <p class="mute small">Tes séries sont enregistrées sur ce téléphone seulement. Exporte un fichier de temps en temps.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div></div>
    <div class="card"><h3>Vidéos</h3><p class="mute small">Colle un lien YouTube ou un identifiant. Vide : retour à la vidéo par défaut. Si une vidéo refuse la lecture intégrée, remplace-la ici.</p>${vids}</div>
-   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'1'}</p><button class="btn" data-act="update">Chercher une mise à jour</button></div>`;
+   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button></div>`;
 }
 
 async function exportBackup(){
@@ -53,7 +53,7 @@ async function exportBackup(){
 window.onViewAct=async(a)=>{
   if(a==='export')exportBackup();
   else if(a==='copy'){try{await navigator.clipboard.writeText(Store.exportJson());toast('Copié')}catch(e){toast('Copie impossible : utilise Exporter')}}
-  else if(a==='update'){try{const r=await navigator.serviceWorker.getRegistration();if(r){await r.update();toast('Vérifié. Ferme et rouvre l’app si une version est prête.')}else toast('Pas de mode hors ligne ici')}catch(e){toast('Vérification impossible')}}
+  else if(a==='update'){try{toast('Mise à jour en cours…');const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));setTimeout(()=>location.reload(),600)}catch(e){location.reload()}}
 };
 document.addEventListener('change',e=>{
   const t=e.target;
@@ -66,4 +66,8 @@ document.addEventListener('change',e=>{
 });
 
 render();
-if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+  const had=!!navigator.serviceWorker.controller;let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||reloaded)return;if(S.st!==null||T){toast('Mise à jour prête : ferme et rouvre l’app après ta séance');return}reloaded=true;location.reload()});
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update().catch(()=>{});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')r.update().catch(()=>{})})}).catch(()=>{});
+}
