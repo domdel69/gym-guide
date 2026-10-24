@@ -41,6 +41,8 @@ function viewSettings(){
    <div class="card"><h3>Sauvegarde</h3>
     <p class="mute small">Tes séries sont enregistrées sur ce téléphone seulement. Exporte un fichier de temps en temps.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div></div>
+   <div class="card"><h3>À imprimer</h3><p class="mute small">Une feuille A4 par séance, avec cases pour noter reps et charges. Pour les jours où le téléphone est à plat.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="print/seance-a.pdf" target="_blank" rel="noopener">Séance A</a><a class="btn" href="print/seance-b.pdf" target="_blank" rel="noopener">Séance B</a><a class="btn" href="print/seance-c.pdf" target="_blank" rel="noopener">Séance C</a><a class="btn" href="print/routine-maison.pdf" target="_blank" rel="noopener">Maison</a></div></div>
    <div class="card"><h3>Vidéos</h3><p class="mute small">Colle un lien YouTube ou un identifiant. Vide : retour à la vidéo par défaut. Si une vidéo refuse la lecture intégrée, remplace-la ici.</p>${vids}</div>
    <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button></div>`;
 }
