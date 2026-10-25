@@ -60,7 +60,7 @@ def page(sid,warm):
         wu=f"<div class='wu'><b>Échauffement 6 min</b>{items}</div>"
     w=f"<table><colgroup><col style='width:9mm'><col style='width:92mm'><col style='width:28mm'><col></colgroup><tr><th></th><th>Exercice</th><th>Objectif</th><th><div class='sets'>{heads.replace('th','div')}</div></th></tr>{body}</table>"
     return f"""<html><head><meta charset='utf-8'><style>{CSS}</style></head><body>
-<div class='meta'><div><h1>{e(s['title'])}</h1><div class='sub'>{e(s['sub'])}</div><div class='legend'>S1–S{maxn} = séries 1 à {maxn} (note les reps et les kg). Case grise = série non prévue. 2a / 2b = superset : alterne les deux exercices.</div></div>
+<div class='meta'><div><h1>{e(s['title'])}</h1><div class='sub'>{e(s['sub'])}</div><div class='legend'>S1–S{maxn} = séries 1 à {maxn} (note les reps et les kg). Case grise = série non prévue. Lettres a / b = superset : alterne les deux exercices.</div></div>
 <div class='fields'>Date<span></span>Semaine<span style='width:14mm'></span></div></div>{wu}{w}
 <div class='foot'><span>Charge : laisse 2 reps en réserve. Toutes les séries au haut de la fourchette 2 séances de suite : +2.5–5 %. Douleur tendon ou articulation à 4/10 ou plus : saute l’exercice.</span><span>Gym Guide {e(ver)} · imprimé le {today}</span></div></body></html>"""
 files={'a':('seance-a.pdf',True),'b':('seance-b.pdf',True),'c':('seance-c.pdf',True),'home':('routine-maison.pdf',False)}
