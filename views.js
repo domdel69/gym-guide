@@ -40,7 +40,9 @@ function viewSettings(){
     <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label></div>
    <div class="card"><h3>Sauvegarde</h3>
     <p class="mute small">Tes séries sont enregistrées sur ce téléphone seulement. Exporte un fichier de temps en temps.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div>
+    <p class="mute small" style="margin-top:14px">Effacer supprime toutes les séries enregistrées sur ce téléphone. Les liens vidéo et les options sont conservés. Exporte d’abord si tu veux garder une copie.</p>
+    <button class="btn" data-act="clearlog">Effacer le journal</button></div>
    <div class="card"><h3>À imprimer</h3><p class="mute small">Une feuille A4 par séance, avec cases pour noter reps et charges. Pour les jours où le téléphone est à plat.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="print/seance-a.pdf" target="_blank" rel="noopener">Séance A</a><a class="btn" href="print/seance-b.pdf" target="_blank" rel="noopener">Séance B</a><a class="btn" href="print/seance-c.pdf" target="_blank" rel="noopener">Séance C</a><a class="btn" href="print/routine-maison.pdf" target="_blank" rel="noopener">Maison</a></div></div>
    <div class="card"><h3>Vidéos</h3><p class="mute small">Colle un lien YouTube ou un identifiant. Vide : retour à la vidéo par défaut. Si une vidéo refuse la lecture intégrée, remplace-la ici.</p>${vids}</div>
@@ -55,6 +57,7 @@ async function exportBackup(){
 window.onViewAct=async(a)=>{
   if(a==='export')exportBackup();
   else if(a==='copy'){try{await navigator.clipboard.writeText(Store.exportJson());toast('Copié')}catch(e){toast('Copie impossible : utilise Exporter')}}
+  else if(a==='clearlog'){const n=Store.dates().length;if(confirm('Effacer le journal ('+n+' jour'+(n>1?'s':'')+' enregistré'+(n>1?'s':'')+') ? Cette action est définitive.')){Store.clearLog();toast('Journal effacé');render()}}
   else if(a==='update'){try{toast('Mise à jour en cours…');const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));setTimeout(()=>location.reload(),600)}catch(e){location.reload()}}
 };
 document.addEventListener('change',e=>{

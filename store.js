@@ -17,8 +17,9 @@ const Store=(()=>{
   const last=(ex,beforeDate)=>history(ex).find(h=>h.date!==beforeDate);
   const videoId=ex=>d.settings.videos[ex]||EX[ex].yt;
   const parseYt=s=>{s=(s||'').trim();if(!s)return '';let m=s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);if(m)return m[1];return /^[A-Za-z0-9_-]{11}$/.test(s)?s:null};
-  return{d,save,today,get,setSet,history,last,videoId,parseYt,
+  return{d,save,today,get,setSet,dates,history,last,videoId,parseYt,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:1,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data)throw new Error('format');d=j.data;d.log=d.log||{};d.settings=Object.assign({videos:{},awake:true,sound:true},d.settings);d.settings.videos=d.settings.videos||{};Store.d=d;save()},
+    clearLog:()=>{d.log={};Store.d=d;save()},
     reset:()=>{d={log:{},settings:{videos:{},awake:true,sound:true}};Store.d=d;save()}};
 })();
