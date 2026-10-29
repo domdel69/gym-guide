@@ -37,6 +37,7 @@ Suivi excludes warm-up stations (items with `warm:true` in the sessions, placed 
 ## Releases
 | Version | Commit | Archive |
 | --- | --- | --- |
+| 0.11 | see git log "0.11" | `releases/0.11/` |
 | 0.10 | 449dfb4 | `releases/0.10/` |
 | 0.9 | 105a9e1 | `releases/0.9/` |
 | 0.8 | eddde6c | `releases/0.8/` |

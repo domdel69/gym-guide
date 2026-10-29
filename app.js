@@ -46,7 +46,7 @@ function viewChoice(sess){
 const isWarm=(sess,i)=>!!sess.stations[i][0].warm;
 function stLabel(sess,i){let n=0,w=0;for(let k=0;k<=i;k++){if(isWarm(sess,k))w++;else n++}
   const tw=sess.stations.filter((_,k)=>isWarm(sess,k)).length,tn=sess.stations.length-tw;
-  return isWarm(sess,i)?{n:'É'+w,txt:'Échauffement '+w+' / '+tw}:{n:String(n),txt:'Station '+n+' / '+tn}}
+  return isWarm(sess,i)?{n:String(w),txt:'Échauffement '+w+' / '+tw}:{n:String(n),txt:'Station '+n+' / '+tn}}
 function viewTrain(){
   if(S.sess===null)return viewHome();
   const sess=sessOf(S.sess);
