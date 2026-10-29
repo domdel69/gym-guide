@@ -11,7 +11,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif}
 body{padding-top:env(safe-area-inset-top);overscroll-behavior-y:none}
-#app{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-left)) calc(96px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right))}
+#app{max-width:640px;margin:0 auto;padding:30px max(16px,env(safe-area-inset-left)) calc(96px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right))}
 h1{font-size:1.7rem;line-height:1.1;margin:6px 0 4px;letter-spacing:-.01em}
 h2{font-size:1.25rem;margin:18px 0 8px}
 h3{font-size:1.05rem;margin:0}
@@ -167,3 +167,10 @@ svg.chart,.chart svg{width:100%;height:auto;display:block}
 .choice.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .choice.primary span{color:var(--accent-ink);opacity:.85}
 .note.editing{background:var(--hi);color:#fff}
+
+/* sous-bloc repliable (versions précédentes) */
+details.sub{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}
+details.sub>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;min-height:44px;font-weight:700}
+details.sub>summary::-webkit-details-marker{display:none}
+details.sub>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--mute);border-bottom:2px solid var(--mute);transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .15s}
+details.sub[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
