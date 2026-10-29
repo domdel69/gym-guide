@@ -123,6 +123,10 @@ window.onViewAct=async(a,b)=>{
 };
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset.act==='inp'){const m=/^([rw])(\d+)$/.exec(t.id);
+    if(m&&S.sess&&S.st!==null){const sess=sessOf(S.sess),it=sess.stations[S.st][S.exi],k=+m[2];
+      Store.setSet(curDate(),sess.id,it.ex,k,m[1]==='r'?{reps:num(t.value)}:{kg:num(t.value)})}
+    return}
   if(t.dataset.vid){const id=t.dataset.vid,raw=t.value.trim();
     if(!raw){delete Store.d.settings.videos[id];Store.save();toast('Vidéo par défaut rétablie');render();return}
     const p=Store.parseYt(raw);if(!p){toast('Lien YouTube invalide');render();return}

@@ -66,7 +66,7 @@ const Store=(()=>{
   const history=(ex,all)=>{const out=[];for(const dt of dates().reverse()){const best=[],sids=[];
     for(const sid in d.log[dt]){if(!all&&sid==='warmup')continue;const a=doneSets(d.log[dt][sid][ex]);if(a.length){best.push(...a);sids.push(sid)}}
     if(best.length)out.push({date:dt,sets:best,sids})}return out};
-  const last=(ex,beforeDate)=>history(ex,true).find(h=>h.date!==beforeDate);
+  const last=(ex,beforeDate)=>history(ex,true).find(h=>h.date<beforeDate);
   /* Séances enregistrées pour le Suivi : sans échauffement ni exercices sans reps ni charge. */
   const sessions=()=>{const out=[];for(const dt of dates().reverse()){
     for(const sid in d.log[dt]){if(sid==='warmup')continue;const exs=[];let t=0;
@@ -81,7 +81,8 @@ const Store=(()=>{
     for(const dt in d.log)for(const sid in d.log[dt])for(const id in d.log[dt][sid])
       if(!seen.has(id)&&sid!=='warmup'&&tracked(id)&&history(id).length){seen.add(id);old.push(id)}
     return{live,old}};
-  const lastDate=sid=>{for(const dt of dates().reverse()){const L=d.log[dt][sid];if(L&&Object.keys(L).some(ex=>doneSets(L[ex]).length))return dt}return null};
+  const lastDate=(sid,before)=>{for(const dt of dates().reverse()){if(before&&dt>=before)continue;const L=d.log[dt][sid];if(L&&Object.keys(L).some(ex=>doneSets(L[ex]).length))return dt}return null};
+  const countDone=(date,sid)=>{const L=(d.log[date]||{})[sid]||{};return Object.keys(L).reduce((n,ex)=>n+doneSets(L[ex]).length,0)};
 
   const videoId=ex=>d.settings.videos[ex]||(EX[ex]||{}).yt||'';
   const parseYt=s=>{s=(s||'').trim();if(!s)return '';let m=s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);if(m)return m[1];return /^[A-Za-z0-9_-]{11}$/.test(s)?s:null};
@@ -93,7 +94,7 @@ const Store=(()=>{
   const undo=()=>{const u=JSON.parse(localStorage.getItem(UNDO)||'null');if(!u)throw new Error('none');
     stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
 
-  return{d,save,today,get,setSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,
+  return{d,save,today,get,setSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
       stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},

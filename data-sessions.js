@@ -2,14 +2,14 @@
    rest = repos en secondes après chaque série. side = répétitions « par côté ». */
 const I=(ex,sets,reps,rest,o={})=>Object.assign({ex,sets,reps,rest},o);
 window.SESSIONS=[
-{id:'warmup',tab:'Échauffement',title:'Échauffement',sub:'6 min, toutes les séances',
+{id:'warmup',tab:'Échauffement',title:'Échauffement',sub:'6 min, toutes les séances',dur:'6 min',focus:'Avant chaque séance',
  intro:'Vélo elliptique facile d’abord, puis le travail à l’élastique.',
  stations:[
   [I('elliptical',1,'4 min',0)],
   [I('bandpull',1,'15',0)],
   [I('bander',1,'12 par côté',0)],
   [I('ankle',1,'10 par sens',0)]]},
-{id:'a',tab:'Séance A',title:'Séance A',sub:'Pectoraux et bas du corps, environ 60 min',
+{id:'a',tab:'Séance A',title:'Séance A',sub:'Pectoraux et bas du corps, environ 60 min',dur:'≈ 60 min',focus:'Pectoraux, bas du corps',
  intro:'Les exercices sur machine se font en séries successives. Seules les stations à deux exercices s’enchaînent : une machine ou une poulie avec un exercice à l’élastique, au tapis ou aux haltères. Une série du premier, repos, une série du second, et ainsi de suite. Si une machine est prise, change l’ordre des exercices.',
  stations:[
   [I('legpress',3,'10',90)],
@@ -19,7 +19,7 @@ window.SESSIONS=[
   [I('legcurl',3,'10–12',60)],
   [I('crunch',3,'12–15',45),I('deadbug',3,'8 par côté',60)],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur. Optionnel : saute-le si la séance dépasse 60 min.'})]]},
-{id:'b',tab:'Séance B',title:'Séance B',sub:'Dos et définition des pectoraux, environ 59 min',
+{id:'b',tab:'Séance B',title:'Séance B',sub:'Dos et définition des pectoraux, environ 59 min',dur:'≈ 59 min',focus:'Dos, pectoraux',
  intro:'Toutes les séries se font à la suite, sans superset. Si une machine est prise, change l’ordre des exercices. Les bras sont en option, après la séance.',
  stations:[
   [I('pullup',4,'5–8',90)],
@@ -32,7 +32,7 @@ window.SESSIONS=[
   [I('curl',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
   [I('triext',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur. Optionnel : saute-le si la séance dépasse 60 min.'})]]},
-{id:'c',tab:'Séance C',title:'Séance C : rattrapage',sub:'Environ 64 min',
+{id:'c',tab:'Séance C',title:'Séance C : rattrapage',sub:'Environ 64 min',dur:'≈ 64 min',focus:'Rattrapage',
  intro:'À utiliser quand une seule séance rentre dans la semaine, et pendant la semaine de Noël. Elle remplace une séance manquée, elle ne s’ajoute jamais.',
  stations:[
   [I('legpress',3,'10',90,{note:'Même charge qu’en séance A.'})],
@@ -44,7 +44,7 @@ window.SESSIONS=[
   [I('facepull',2,'15',60)],
   [I('crunch',2,'12–15',45),I('deadbug',2,'8 par côté',60)],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur.'})]]},
-{id:'home',tab:'Maison',title:'Routine maison H',sub:'15 min, 2 à 3 fois par semaine',
+{id:'home',tab:'Maison',title:'Routine maison H',sub:'15 min, 2 à 3 fois par semaine',dur:'15 min',focus:'2 à 3 fois par semaine',
  intro:'Circuit en 2 tours, 30 s de repos. Les jours sans salle.',
  stations:[
   [I('ankle',2,'1 min',30,{note:'Mobilité de cheville, sans charge.'})],

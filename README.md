@@ -37,5 +37,6 @@ Suivi excludes the warm-up session and every exercise of kind `tick`.
 ## Releases
 | Version | Commit | Archive |
 | --- | --- | --- |
+| 0.9 | (see git log: "0.9") | `releases/0.9/` |
 | 0.8 | eddde6c | `releases/0.8/` |
 | 0.7 | f035aa9 | `releases/0.7/` |

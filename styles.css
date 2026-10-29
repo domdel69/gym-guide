@@ -158,3 +158,11 @@ svg.chart,.chart svg{width:100%;height:auto;display:block}
 /* version archivée */
 .archive-banner{position:sticky;top:0;z-index:70;background:var(--hi);color:#fff;padding:8px 14px;font-weight:700;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .archive-banner a{color:#fff;text-decoration:underline}
+
+/* choix de séance */
+.choices{display:flex;flex-direction:column;gap:12px;margin:18px 0}
+.choice{display:flex;flex-direction:column;gap:3px;text-align:left;width:100%;min-height:84px;padding:16px;border-radius:var(--r);border:1px solid var(--line);background:var(--card);cursor:pointer}
+.choice b{font-size:1.15rem}.choice span{color:var(--mute);font-size:.92rem}
+.choice.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.choice.primary span{color:var(--accent-ink);opacity:.85}
+.note.editing{background:var(--hi);color:#fff}

@@ -1,2 +1,2 @@
-window.APP_VERSION='0.8';
-window.RELEASES=['0.8','0.7'];
+window.APP_VERSION='0.9';
+window.RELEASES=['0.9','0.8','0.7'];
