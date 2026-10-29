@@ -1,39 +1,51 @@
 /* Gym Guide : état, séances, minuteur de repos. */
 const $=s=>document.querySelector(s);
-const ui=(Store.d.ui=Store.d.ui||{tab:'train',sess:'a'});
-const S={tab:ui.tab||'train',sess:ui.sess||'a',st:null,exi:0,guide:(window.GUIDES[0]||{}).id,vid:false};
+const ui=(Store.d.ui=Store.d.ui||{tab:'train'});
+const S={tab:ui.tab||'train',sess:null,st:null,exi:0,guide:(window.GUIDES[0]||{}).id,vid:false,prog:{mode:'sessions',ex:null},open:{}};
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtDate=d=>{const[y,m,j]=d.split('-');return j+'.'+m+'.'+y};
+const DAYS=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+const fmtDay=d=>{const[y,m,j]=d.split('-');return DAYS[new Date(+y,m-1,+j).getDay()]+' '+j+'.'+m+'.'+y};
+const PB=location.pathname.includes('/releases/')?'../../print/':'print/';
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
-const persist=()=>{const u=(Store.d.ui=Store.d.ui||{});u.tab=S.tab;u.sess=S.sess;Store.save()};
+const persist=()=>{const u=(Store.d.ui=Store.d.ui||{});u.tab=S.tab;delete u.sess;Store.save()};
 const sessOf=id=>SESSIONS.find(s=>s.id===id)||SESSIONS[0];
 const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)};
 
 const ICONS={
- train:'<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
+ train:'<path d="M3 11l9-8 9 8M5 9.5V20h5v-6h4v6h5V9.5"/>',
  guides:'<path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M9 8h6M9 12h6"/>',
  progress:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'};
-const TABS=[['train','Séances'],['guides','Guides'],['progress','Suivi'],['settings','Réglages']];
+const TABS=[['train','Accueil'],['guides','Guides'],['progress','Suivi'],['settings','Réglages']];
 
 /* ---------- séances ---------- */
 const stationDone=(sess,i,date=Store.today())=>sess.stations[i].every(it=>setsDone(sess,it,date)>=it.sets);
 function setsDone(sess,it,date){return Store.get(date,sess.id,it.ex).filter(s=>s&&s.done).length}
 const first=r=>(String(r).match(/\d+/)||[''])[0];
 
+function viewHome(){
+  const card=sid=>{const s=sessOf(sid),n=s.stations.length,dn=s.stations.filter((_,i)=>stationDone(s,i)).length,ld=Store.lastDate(sid);
+    const badge=dn===n?'<span class="badge ok" aria-label="Terminée">✓</span>':dn?`<span class="badge">${dn}/${n}</span>`:'';
+    return `<button class="home-card" data-act="sess" data-id="${sid}"><span class="hc-t"><b>${esc(s.title)}</b><span>${esc(s.sub)}</span><span class="small">${ld?'Dernière fois : '+fmtDay(ld):'Pas encore faite'}</span></span>${badge}<span class="chev" aria-hidden="true">›</span></button>`};
+  return `<h1>Gym Guide</h1><div class="mute">${fmtDay(Store.today())}</div>
+   <h2>Avant la salle</h2><div class="list">${card('warmup')}</div>
+   <h2>À la salle</h2><div class="list">${card('a')}${card('b')}${card('c')}</div>
+   <h2>À la maison</h2><div class="list">${card('home')}</div>`;
+}
 function viewTrain(){
+  if(S.sess===null)return viewHome();
   const sess=sessOf(S.sess);
   if(S.st!==null)return viewStation(sess,S.st);
   const done=sess.stations.filter((_,i)=>stationDone(sess,i)).length;
-  const seg=SESSIONS.map(s=>`<button role="tab" data-act="sess" data-id="${s.id}" aria-selected="${s.id===S.sess}">${s.tab}</button>`).join('');
   const rows=sess.stations.map((st,i)=>{
     const d=stationDone(sess,i);
     return `<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':i+1}</span><span class="t">`+
       st.map(it=>`<b>${esc(EX[it.ex].en)}</b><span>${esc(EX[it.ex].fr)}</span>`).join('')+
       `</span><span class="sr">${st.map(it=>it.sets>1||EX[it.ex].kind!=='tick'?`${it.sets}×${esc(it.reps)}`:esc(it.reps)).join('<br>')}</span></button>`}).join('');
-  return `<h1>${esc(sess.title)}</h1><div class="mute">${esc(sess.sub)}</div>
-   <div class="seg" role="tablist">${seg}</div>
-   <p class="mute small">${esc(sess.intro)}</p>
+  return `<div class="top"><button class="btn sm" data-act="home">‹ Accueil</button></div>
+   <h1>${esc(sess.title)}</h1><div class="mute">${esc(sess.sub)}</div>
+   <p class="mute small" style="margin-top:10px">${esc(sess.intro)}</p>
    <div class="small mute">Aujourd’hui : ${done}/${sess.stations.length} stations faites</div>
    <div class="list">${rows}</div>`;
 }
@@ -56,14 +68,14 @@ function viewStation(sess,si){
   }
   const lastTxt=prev?`Dernière fois (${fmtDate(prev.date)}) : `+prev.sets.map(s=>(s.reps!=null?s.reps:'')+(s.kg!=null&&s.kg!==''?'×'+s.kg+' kg':'')).join(' · '):'Première fois : note tes charges de départ.';
   const vid=Store.videoId(it.ex),vok=/^[A-Za-z0-9_-]{11}$/.test(vid);
-  const video=S.vid&&vok?`<iframe src="https://www.youtube-nocookie.com/embed/${vid}?playsinline=1&rel=0&autoplay=1" title="${esc(ex.en)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+  const video=!vok?`<div class="novid"><span>Pas de vidéo par défaut.</span><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Chercher une démo ↗</a></div>`:S.vid&&vok?`<iframe src="https://www.youtube-nocookie.com/embed/${vid}?playsinline=1&rel=0&autoplay=1" title="${esc(ex.en)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
     :`<button class="play" data-act="vid" aria-label="Lire la vidéo"></button>`;
   const last=si===sess.stations.length-1;
   return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">Station ${si+1} / ${sess.stations.length}</span></div>
    <div class="prog">${prog}</div>${tabs}
    <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>
    <div class="video">${video}</div>
-   <div class="vlinks"><a href="https://www.youtube.com/watch?v=${vok?vid:''}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Autres démos ↗</a></div>
+   <div class="vlinks">${vok?`<a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a>`:'<span></span>'}<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Autres démos ↗</a></div>
    <div class="target"><span class="mute">Objectif</span><b>${kind==='tick'&&it.sets===1?esc(it.reps):it.sets+' × '+esc(it.reps)}</b></div>
    <div class="sets">${sets}</div><div class="last">${esc(lastTxt)}</div>
    ${it.note?`<div class="note">${esc(it.note)}</div>`:''}${ex.note?`<div class="note">${esc(ex.note)}</div>`:''}
@@ -117,8 +129,9 @@ function render(){
 function onAct(e){
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,sess=sessOf(S.sess);
   if(a==='inp')return;
-  if(a==='tab'){S.tab=b.dataset.id;S.st=null;persist();scrollTo(0,0);render()}
-  else if(a==='sess'){S.sess=b.dataset.id;S.st=null;persist();render()}
+  if(a==='tab'){if(S.tab==='progress'&&b.dataset.id==='progress')S.prog.ex=null;S.tab=b.dataset.id;S.st=null;if(S.tab==='train')S.sess=null;persist();scrollTo(0,0);render()}
+  else if(a==='sess'){S.sess=b.dataset.id;S.st=null;scrollTo(0,0);render()}
+  else if(a==='home'){S.sess=null;S.st=null;scrollTo(0,0);render()}
   else if(a==='open')goStation(+b.dataset.i);
   else if(a==='list'){S.st=null;render()}
   else if(a==='ex'){S.exi=+b.dataset.k;S.vid=false;render()}
@@ -132,3 +145,4 @@ function onAct(e){
   else if(window.onViewAct)window.onViewAct(a,b,e);
 }
 document.addEventListener('click',onAct);
+document.addEventListener('toggle',e=>{const k=e.target&&e.target.dataset&&e.target.dataset.k;if(k)S.open[k]=e.target.open},true);

@@ -1,0 +1,80 @@
+{
+ "bike": {
+  "kind": "tick"
+ },
+ "bandpull": {
+  "kind": "reps"
+ },
+ "bander": {
+  "kind": "reps"
+ },
+ "ankle": {
+  "kind": "tick"
+ },
+ "legpress": {
+  "kind": "lift"
+ },
+ "chestpress": {
+  "kind": "lift"
+ },
+ "row": {
+  "kind": "lift"
+ },
+ "pulldown": {
+  "kind": "lift"
+ },
+ "latraise": {
+  "kind": "lift"
+ },
+ "legcurl": {
+  "kind": "lift"
+ },
+ "crunch": {
+  "kind": "lift"
+ },
+ "deadbug": {
+  "kind": "reps"
+ },
+ "pullup": {
+  "kind": "assist"
+ },
+ "incline": {
+  "kind": "lift"
+ },
+ "facepull": {
+  "kind": "lift"
+ },
+ "pecfly": {
+  "kind": "lift"
+ },
+ "pullthrough": {
+  "kind": "lift"
+ },
+ "pallof": {
+  "kind": "lift"
+ },
+ "shoulderpress": {
+  "kind": "lift"
+ },
+ "curl": {
+  "kind": "lift"
+ },
+ "triext": {
+  "kind": "lift"
+ },
+ "scap": {
+  "kind": "reps"
+ },
+ "negpull": {
+  "kind": "reps"
+ },
+ "pushup": {
+  "kind": "reps"
+ },
+ "chintuck": {
+  "kind": "tick"
+ },
+ "elliptical": {
+  "kind": "tick"
+ }
+}

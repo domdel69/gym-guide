@@ -3,9 +3,9 @@
 const I=(ex,sets,reps,rest,o={})=>Object.assign({ex,sets,reps,rest},o);
 window.SESSIONS=[
 {id:'warmup',tab:'Échauffement',title:'Échauffement',sub:'6 min, toutes les séances',
- intro:'Vélo facile d’abord, puis le travail à l’élastique.',
+ intro:'Vélo elliptique facile d’abord, puis le travail à l’élastique.',
  stations:[
-  [I('bike',1,'4 min',0)],
+  [I('elliptical',1,'4 min',0)],
   [I('bandpull',1,'15',0)],
   [I('bander',1,'12 par côté',0)],
   [I('ankle',1,'10 par sens',0)]]},

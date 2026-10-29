@@ -4,6 +4,10 @@ window.EX = {
 bike:{en:'Stationary bike',fr:'Vélo',kind:'tick',yt:'rlOOqDgDU3U',
   cues:['Hauteur de selle : genou légèrement fléchi en bas de la pédale.','Allure facile : tu peux parler en phrases complètes.','Pousse avec tout le pied, pas sur la pointe.'],
   avoid:'Pédaler debout ou en danseuse sur la pointe des pieds.'},
+elliptical:{en:'Elliptical bike',fr:'Vélo elliptique',kind:'tick',yt:'',
+  cues:['Pieds à plat sur les pédales, talons posés : pousse avec tout le pied, pas sur la pointe.','Buste droit, regard devant, mains sur les poignées sans t’y appuyer.','Résistance basse, allure facile : tu peux parler en phrases complètes.'],
+  avoid:'Pousser sur la pointe des pieds, se pencher sur les poignées ou monter trop vite en résistance.',
+  note:'Pas de vidéo par défaut : colle un lien YouTube dans Réglages > Vidéos.'},
 bandpull:{en:'Band pull-aparts',fr:'Écartements à l’élastique',kind:'reps',yt:'smSSXITNpCI',
   cues:['Bras tendus à hauteur de poitrine, élastique devant toi.','Écarte l’élastique en serrant les omoplates.','Reviens lentement en gardant la tension.'],
   avoid:'Hausser les épaules ou creuser le bas du dos.'},
@@ -77,3 +81,6 @@ chintuck:{en:'Chin tucks and thoracic extension',fr:'Rétractions du menton et e
   cues:['Debout ou assis, regard à l’horizontale.','Rentre le menton droit en arrière, comme pour faire un double menton. Tiens 1–2 s.','Puis allonge-toi sur une serviette roulée au milieu du dos et ouvre la poitrine : 1 min au total.'],
   avoid:'Pencher la tête vers le bas ou le haut pendant la rétraction.',note:'Posture : travail de bureau.'}
 };
+
+/* Renommages : ancien identifiant -> nouvel identifiant. Le journal enregistré est migré au démarrage. Ne supprime jamais un identifiant sans l’ajouter ici. */
+window.ALIASES={};
