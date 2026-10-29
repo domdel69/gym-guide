@@ -38,11 +38,14 @@ def setbox(n,total,kind):
     if kind=='reps':return '<div><div class="set"><u class="a">reps</u></div></div>'
     return '<div><div class="set"><i></i><u class="a">reps</u><u class="b">kg</u></div></div>'
 def rows(sess):
-    out=[];maxn=max(it['sets'] for st in sess['stations'] for it in st)
+    out=[];maxn=max(it['sets'] for st in sess['stations'] if not st[0].get('warm') for it in st)
+    num=0
     for si,st in enumerate(sess['stations']):
+        if st[0].get('warm'):continue  # warm-up is printed as a strip above the table
+        num+=1
         for k,it in enumerate(st):
             ex=EX[it['ex']];cls=' class="st"' if k==0 else ''
-            lab=(str(si+1)+('ab'[k] if len(st)>1 else '')) 
+            lab=(str(num)+('ab'[k] if len(st)>1 else '')) 
             note=it.get('note') or ex.get('note') or ''
             cue=ex['cues'][0]
             obj=f"{it['sets']} × {it['reps']}" if (it['sets']>1 or ex['kind']!='tick') else it['reps']
@@ -56,7 +59,7 @@ def page(sid,warm):
     heads=''.join(f"<th style='text-align:center'>S{i+1}</th>" for i in range(maxn))
     wu=''
     if warm:
-        items=''.join(f"<span class='it'><span class='cb'></span>{e(EX[it['ex']]['en'])} <span style='color:#555'>({e(it['reps'])})</span></span>" for st in SESS['warmup']['stations'] for it in st)
+        items=''.join(f"<span class='it'><span class='cb'></span>{e(EX[it['ex']]['en'])} <span style='color:#555'>({e(it['reps'])})</span></span>" for st in s['stations'] if st[0].get('warm') for it in st)
         wu=f"<div class='wu'><b>Échauffement 6 min</b>{items}</div>"
     w=f"<table><colgroup><col style='width:9mm'><col style='width:92mm'><col style='width:28mm'><col></colgroup><tr><th></th><th>Exercice</th><th>Objectif</th><th><div class='sets'>{heads.replace('th','div')}</div></th></tr>{body}</table>"
     return f"""<html><head><meta charset='utf-8'><style>{CSS}</style></head><body>

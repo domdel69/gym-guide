@@ -1,17 +1,17 @@
 /* Séances. Une station = 1 exercice, ou 2 exercices enchaînés (superset).
    rest = repos en secondes après chaque série. side = répétitions « par côté ». */
 const I=(ex,sets,reps,rest,o={})=>Object.assign({ex,sets,reps,rest},o);
+/* Échauffement : 4 stations marquées warm:true, placées au début des séances A, B et C. */
+const WU=()=>[
+  [I('elliptical',1,'4 min',0,{warm:true})],
+  [I('bandpull',1,'15',0,{warm:true})],
+  [I('bander',1,'12 par côté',0,{warm:true})],
+  [I('ankle',1,'10 par sens',0,{warm:true})]];
 window.SESSIONS=[
-{id:'warmup',tab:'Échauffement',title:'Échauffement',sub:'6 min, toutes les séances',dur:'6 min',focus:'Avant chaque séance',
- intro:'Vélo elliptique facile d’abord, puis le travail à l’élastique.',
- stations:[
-  [I('elliptical',1,'4 min',0)],
-  [I('bandpull',1,'15',0)],
-  [I('bander',1,'12 par côté',0)],
-  [I('ankle',1,'10 par sens',0)]]},
 {id:'a',tab:'Séance A',title:'Séance A',sub:'Pectoraux et bas du corps, environ 60 min',dur:'≈ 60 min',focus:'Pectoraux, bas du corps',
  intro:'Les exercices sur machine se font en séries successives. Seules les stations à deux exercices s’enchaînent : une machine ou une poulie avec un exercice à l’élastique, au tapis ou aux haltères. Une série du premier, repos, une série du second, et ainsi de suite. Si une machine est prise, change l’ordre des exercices.',
  stations:[
+  ...WU(),
   [I('legpress',3,'10',90)],
   [I('chestpress',4,'8–10',90)],
   [I('row',4,'10–12',75)],
@@ -22,6 +22,7 @@ window.SESSIONS=[
 {id:'b',tab:'Séance B',title:'Séance B',sub:'Dos et définition des pectoraux, environ 59 min',dur:'≈ 59 min',focus:'Dos, pectoraux',
  intro:'Toutes les séries se font à la suite, sans superset. Si une machine est prise, change l’ordre des exercices. Les bras sont en option, après la séance.',
  stations:[
+  ...WU(),
   [I('pullup',4,'5–8',90)],
   [I('incline',4,'8–12',90)],
   [I('facepull',4,'12–15',60)],
@@ -35,6 +36,7 @@ window.SESSIONS=[
 {id:'c',tab:'Séance C',title:'Séance C : rattrapage',sub:'Environ 64 min',dur:'≈ 64 min',focus:'Rattrapage',
  intro:'À utiliser quand une seule séance rentre dans la semaine, et pendant la semaine de Noël. Elle remplace une séance manquée, elle ne s’ajoute jamais.',
  stations:[
+  ...WU(),
   [I('legpress',3,'10',90,{note:'Même charge qu’en séance A.'})],
   [I('chestpress',4,'8–10',90)],
   [I('row',3,'10–12',75)],

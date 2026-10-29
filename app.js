@@ -26,35 +26,37 @@ function setsDone(sess,it,date){return Store.get(date,sess.id,it.ex).filter(s=>s
 const first=r=>(String(r).match(/\d+/)||[''])[0];
 
 function viewHome(){
-  const card=sid=>{const s=sessOf(sid),n=s.stations.length,dn=s.stations.filter((_,i)=>stationDone(s,i,Store.today())).length,ld=Store.lastDate(sid);
-    const badge=dn===n?'<span class="badge ok" aria-label="Terminée">✓</span>':dn?`<span class="badge">${dn}/${n}</span>`:'';
-    return `<button class="home-card" data-act="sess" data-id="${sid}"><span class="hc-t"><b>${esc(s.title)}</b><span>${esc(s.dur)} · ${esc(s.focus)}</span><span class="small">${ld?'Dernière fois : '+fmtDay(ld):'Pas encore faite'}</span></span>${badge}<span class="chev" aria-hidden="true">›</span></button>`};
+  const card=sid=>{const s=sessOf(sid),ld=Store.lastDate(sid);
+    return `<button class="home-card" data-act="sess" data-id="${sid}"><span class="hc-t"><b>${esc(s.title)}</b><span>${esc(s.dur)} · ${esc(s.focus)}</span><span class="small">${ld?'Dernière fois : '+fmtDay(ld):'Pas encore faite'}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
   return `<h1>Gym Guide</h1><div class="mute">${fmtDay(Store.today())}</div>
-   <h2>Avant la salle</h2><div class="list">${card('warmup')}</div>
    <h2>À la salle</h2><div class="list">${card('a')}${card('b')}${card('c')}</div>
    <h2>À la maison</h2><div class="list">${card('home')}</div>`;
 }
-/* Choix : séance d'aujourd'hui (nouvelle ou à reprendre) ou modification de la dernière séance enregistrée. */
+/* Écran d'une séance : nouvelle séance en haut, puis toutes les séances enregistrées, de la plus récente à la plus ancienne. */
 function viewChoice(sess){
-  const td=Store.today(),nToday=Store.countDone(td,sess.id),ld=Store.lastDate(sess.id,td);
-  const doneToday=sess.stations.filter((_,i)=>stationDone(sess,i,td)).length;
-  const newBtn=nToday?`<button class="choice primary" data-act="start" data-d="${td}"><b>Reprendre la séance d’aujourd’hui</b><span>${doneToday}/${sess.stations.length} stations faites, ${nToday} série${nToday>1?'s':''} cochée${nToday>1?'s':''}</span></button>`
-    :`<button class="choice primary" data-act="start" data-d="${td}"><b>Nouvelle séance</b><span>${fmtDay(td)} · les chiffres de la dernière fois sont proposés</span></button>`;
-  const editBtn=ld?`<button class="choice" data-act="start" data-d="${ld}"><b>Modifier la dernière séance</b><span>${fmtDay(ld)} · ${Store.countDone(ld,sess.id)} série${Store.countDone(ld,sess.id)>1?'s':''} enregistrée${Store.countDone(ld,sess.id)>1?'s':''}</span></button>`:'';
+  const td=Store.today(),dts=Store.sessionDates(sess.id);
+  const items=dts.map(dt=>{const n=Store.countDone(dt,sess.id),sd=sess.stations.filter((_,i)=>stationDone(sess,i,dt)).length;
+    return `<button class="home-card" data-act="start" data-d="${dt}"><span class="hc-t"><b>${fmtDay(dt)}${dt===td?' · aujourd’hui':''}</b><span>${sd}/${sess.stations.length} stations · ${n} série${n>1?'s':''}</span></span><span class="edit-tag">Modifier</span><span class="chev" aria-hidden="true">›</span></button>`}).join('');
   return `<div class="top"><button class="btn sm" data-act="home">‹ Accueil</button></div>
    <h1>${esc(sess.title)}</h1><div class="mute">${esc(sess.dur)} · ${esc(sess.focus)}</div>
-   <div class="choices">${newBtn}${editBtn}</div>
-   ${ld?'':'<p class="mute small">Pas encore de séance précédente à modifier.</p>'}`;
+   <div class="choices"><button class="choice primary" data-act="fresh"><b>Nouvelle séance</b><span>${fmtDay(td)} · les chiffres de la dernière fois sont proposés</span></button></div>
+   <h2>Séances précédentes</h2>
+   ${items?`<div class="list">${items}</div>`:'<p class="mute small">Aucune séance enregistrée pour l’instant.</p>'}`;
 }
+const isWarm=(sess,i)=>!!sess.stations[i][0].warm;
+function stLabel(sess,i){let n=0,w=0;for(let k=0;k<=i;k++){if(isWarm(sess,k))w++;else n++}
+  const tw=sess.stations.filter((_,k)=>isWarm(sess,k)).length,tn=sess.stations.length-tw;
+  return isWarm(sess,i)?{n:'É'+w,txt:'Échauffement '+w+' / '+tw}:{n:String(n),txt:'Station '+n+' / '+tn}}
 function viewTrain(){
   if(S.sess===null)return viewHome();
   const sess=sessOf(S.sess);
   if(S.date===null)return viewChoice(sess);
   if(S.st!==null)return viewStation(sess,S.st);
   const done=sess.stations.filter((_,i)=>stationDone(sess,i)).length;
+  const hasWarm=sess.stations.some((_,i)=>isWarm(sess,i));
   const rows=sess.stations.map((st,i)=>{
-    const d=stationDone(sess,i);
-    return `<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':i+1}</span><span class="t">`+
+    const d=stationDone(sess,i),head=hasWarm&&(i===0||isWarm(sess,i-1)!==isWarm(sess,i))?`<h2>${isWarm(sess,i)?'Échauffement · 6 min':'Séance'}</h2>`:'';
+    return head+`<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':stLabel(sess,i).n}</span><span class="t">`+
       st.map(it=>`<b>${esc(EX[it.ex].en)}</b><span>${esc(EX[it.ex].fr)}</span>`).join('')+
       `</span><span class="sr">${st.map(it=>it.sets>1||EX[it.ex].kind!=='tick'?`${it.sets}×${esc(it.reps)}`:esc(it.reps)).join('<br>')}</span></button>`}).join('');
   const edit=S.date!==Store.today();
@@ -89,7 +91,7 @@ function viewStation(sess,si){
     :`<button class="play" data-act="vid" aria-label="Lire la vidéo"></button>`;
   const last=si===sess.stations.length-1;
   const editBar=date!==Store.today()?`<div class="note editing">Modification de la séance du <b>${fmtDay(date)}</b></div>`:'';
-  return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">Station ${si+1} / ${sess.stations.length}</span></div>${editBar}
+  return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">${stLabel(sess,si).txt}</span></div>${editBar}
    <div class="prog">${prog}</div>${tabs}
    <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>
    <div class="video">${video}</div>
@@ -115,7 +117,6 @@ function onTick(k){
   if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,it,date)){S.exi=other;S.vid=false;scrollTo(0,0)}
   render();
 }
-const EX_TICK_ONLY=sid=>sessOf(sid).stations.every(st=>st.every(it=>EX[it.ex].kind==='tick'||sid==='warmup'));
 function goStation(i){S.st=i;S.exi=0;S.vid=false;scrollTo(0,0);wake();render()}
 
 /* ---------- minuteur de repos (basé sur l’heure de fin, survit à la mise en veille) ---------- */
@@ -149,7 +150,10 @@ function onAct(e){
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,sess=sessOf(S.sess);
   if(a==='inp')return;
   if(a==='tab'){if(S.tab==='progress'&&b.dataset.id==='progress')S.prog.ex=null;S.tab=b.dataset.id;S.st=null;if(S.tab==='train'){S.sess=null;S.date=null}persist();scrollTo(0,0);render()}
-  else if(a==='sess'){S.sess=b.dataset.id;S.st=null;S.date=EX_TICK_ONLY(b.dataset.id)?Store.today():null;scrollTo(0,0);render()}
+  else if(a==='sess'){S.sess=b.dataset.id;S.st=null;S.date=null;scrollTo(0,0);render()}
+  else if(a==='fresh'){const td=Store.today(),n=Store.countDone(td,S.sess);
+    if(n&&!confirm('Une séance existe déjà aujourd’hui ('+n+' série'+(n>1?'s':'')+'). La remplacer par une séance vide ? L’ancienne reste récupérable dans Réglages > Sauvegarde > Annuler.'))return;
+    if(n)Store.resetSession(td,S.sess);S.date=td;S.st=null;scrollTo(0,0);render()}
   else if(a==='start'){S.date=b.dataset.d;S.st=null;scrollTo(0,0);render()}
   else if(a==='choice'){S.date=null;S.st=null;scrollTo(0,0);render()}
   else if(a==='home'){S.sess=null;S.date=null;S.st=null;scrollTo(0,0);render()}

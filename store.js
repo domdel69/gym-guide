@@ -63,25 +63,31 @@ const Store=(()=>{
 
   /* Historique d’un exercice : [{date, sets:[{reps,kg}], sids:[…]}], du plus récent au plus ancien, séries cochées seulement.
      Le Suivi exclut l’échauffement ; all:true l’inclut (préremplissage « dernière fois »). */
+  /* Exercice d’échauffement dans cette séance (station warm:true) : jamais dans le Suivi. */
+  const warmOnly=(sid,ex)=>{if(sid==='warmup')return true;const S0=window.SESSIONS&&SESSIONS.find(x=>x.id===sid);if(!S0)return false;let n=0,w=0;
+    S0.stations.forEach(st=>st.forEach(it=>{if(it.ex===ex){n++;if(it.warm)w++}}));return n>0&&n===w};
   const history=(ex,all)=>{const out=[];for(const dt of dates().reverse()){const best=[],sids=[];
-    for(const sid in d.log[dt]){if(!all&&sid==='warmup')continue;const a=doneSets(d.log[dt][sid][ex]);if(a.length){best.push(...a);sids.push(sid)}}
+    for(const sid in d.log[dt]){if(!all&&warmOnly(sid,ex))continue;const a=doneSets(d.log[dt][sid][ex]);if(a.length){best.push(...a);sids.push(sid)}}
     if(best.length)out.push({date:dt,sets:best,sids})}return out};
   const last=(ex,beforeDate)=>history(ex,true).find(h=>h.date<beforeDate);
   /* Séances enregistrées pour le Suivi : sans échauffement ni exercices sans reps ni charge. */
   const sessions=()=>{const out=[];for(const dt of dates().reverse()){
-    for(const sid in d.log[dt]){if(sid==='warmup')continue;const exs=[];let t=0;
-      for(const ex in d.log[dt][sid]){if(!tracked(ex))continue;const sets=doneSets(d.log[dt][sid][ex]);
+    for(const sid in d.log[dt]){const exs=[];let t=0;
+      for(const ex in d.log[dt][sid]){if(!tracked(ex)||warmOnly(sid,ex))continue;const sets=doneSets(d.log[dt][sid][ex]);
         if(sets.length){exs.push({ex,sets});sets.forEach(s=>{t=Math.max(t,s.t||0)})}}
       if(exs.length)out.push({date:dt,sid,title:sessTitle(dt,sid),exs,t})}}
     return out.sort((a,b)=>a.date===b.date?b.t-a.t:(a.date<b.date?1:-1))};
   /* Exercices suivis qui ont un historique : du programme actuel d’abord, puis les anciens. */
   const trackedIds=()=>{const seen=new Set(),live=[],old=[];
-    const order=[];SESSIONS.forEach(S0=>{if(S0.id!=='warmup')S0.stations.forEach(st=>st.forEach(it=>order.push(it.ex)))});
+    const order=[];SESSIONS.forEach(S0=>{S0.stations.forEach(st=>st.forEach(it=>order.push(it.ex)))});
     for(const id of [...new Set(order.concat(Object.keys(EX)))])if(EX[id]&&tracked(id)&&history(id).length){seen.add(id);live.push(id)}
     for(const dt in d.log)for(const sid in d.log[dt])for(const id in d.log[dt][sid])
-      if(!seen.has(id)&&sid!=='warmup'&&tracked(id)&&history(id).length){seen.add(id);old.push(id)}
+      if(!seen.has(id)&&!warmOnly(sid,id)&&tracked(id)&&history(id).length){seen.add(id);old.push(id)}
     return{live,old}};
   const lastDate=(sid,before)=>{for(const dt of dates().reverse()){if(before&&dt>=before)continue;const L=d.log[dt][sid];if(L&&Object.keys(L).some(ex=>doneSets(L[ex]).length))return dt}return null};
+  /* Dates où la séance sid a des séries cochées, de la plus récente à la plus ancienne. */
+  const sessionDates=sid=>dates().reverse().filter(dt=>d.log[dt][sid]&&Object.keys(d.log[dt][sid]).some(ex=>doneSets(d.log[dt][sid][ex]).length));
+  const resetSession=(date,sid)=>{stash('avant nouvelle séance');if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}delete d.meta.sess[date+'|'+sid];save()};
   const countDone=(date,sid)=>{const L=(d.log[date]||{})[sid]||{};return Object.keys(L).reduce((n,ex)=>n+doneSets(L[ex]).length,0)};
 
   const videoId=ex=>d.settings.videos[ex]||(EX[ex]||{}).yt||'';
@@ -94,7 +100,7 @@ const Store=(()=>{
   const undo=()=>{const u=JSON.parse(localStorage.getItem(UNDO)||'null');if(!u)throw new Error('none');
     stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
 
-  return{d,save,today,get,setSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,
+  return{d,save,today,get,setSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
       stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},

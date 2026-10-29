@@ -25,7 +25,7 @@ The phone log is `log[date][sessionId][exerciseId] = [{reps, kg, done, t}]`, plu
 - Do not change an exercise `kind` (lift, assist, reps, tick) once released.
 - The log format only changes by addition, so an older version of the app can still read it.
 `node tools/check_data.js` enforces these rules against `tools/released-ids.json`.
-Suivi excludes the warm-up session and every exercise of kind `tick`.
+Suivi excludes warm-up stations (items with `warm:true` in the sessions, placed at the start of A, B and C) and every exercise of kind `tick`.
 
 ## Rollback
 - From the phone: Réglages > Application > "Version x.y" opens the archived copy of that version. The log is shared (same origin), and a banner links back to the latest version.
@@ -37,6 +37,7 @@ Suivi excludes the warm-up session and every exercise of kind `tick`.
 ## Releases
 | Version | Commit | Archive |
 | --- | --- | --- |
+| 0.10 | (this commit, see git log "0.10") | `releases/0.10/` |
 | 0.9 | 105a9e1 | `releases/0.9/` |
 | 0.8 | eddde6c | `releases/0.8/` |
 | 0.7 | f035aa9 | `releases/0.7/` |

@@ -160,6 +160,7 @@ svg.chart,.chart svg{width:100%;height:auto;display:block}
 .archive-banner a{color:#fff;text-decoration:underline}
 
 /* choix de séance */
+.edit-tag{font-weight:700;color:var(--accent);font-size:.9rem}
 .choices{display:flex;flex-direction:column;gap:12px;margin:18px 0}
 .choice{display:flex;flex-direction:column;gap:3px;text-align:left;width:100%;min-height:84px;padding:16px;border-radius:var(--r);border:1px solid var(--line);background:var(--card);cursor:pointer}
 .choice b{font-size:1.15rem}.choice span{color:var(--mute);font-size:.92rem}
