@@ -10,8 +10,10 @@
   --accent:#3cc6b6;--accent-ink:#06201d;--hi:#ff8a4c;--ok:#4ade80;--warn:#f0a53a;--bad:#f87171;--tab:#111b22ee;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif}
-body{padding-top:env(safe-area-inset-top);overscroll-behavior-y:none}
-#app{max-width:640px;margin:0 auto;padding:30px max(16px,env(safe-area-inset-left)) calc(96px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right))}
+html{height:100%}
+/* La barre d’onglets fait partie de la mise en page (colonne pleine hauteur) : elle reste en bas de l’écran, que la page soit courte ou longue. */
+body{padding-top:env(safe-area-inset-top);overscroll-behavior-y:none;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+#app{flex:1 0 auto;width:100%;max-width:640px;margin:0 auto;padding:30px max(16px,env(safe-area-inset-left)) 28px max(16px,env(safe-area-inset-right))}
 h1{font-size:1.7rem;line-height:1.1;margin:6px 0 4px;letter-spacing:-.01em}
 h2{font-size:1.25rem;margin:18px 0 8px}
 h3{font-size:1.05rem;margin:0}
@@ -25,7 +27,7 @@ button,a.btn,input,select{min-height:44px}
 .btn.sm{min-height:36px;padding:6px 12px;font-size:.9rem}
 :focus-visible{outline:3px solid var(--hi);outline-offset:2px}
 /* bottom tab bar */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--tab);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+.tabbar{position:sticky;flex:none;bottom:0;z-index:40;background:var(--tab);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--line);display:flex;padding:6px max(8px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-right))}
 .tabbar button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;font-weight:600;color:var(--mute);padding:4px 0;min-height:48px}
 .tabbar button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -100,7 +102,7 @@ svg.spark circle{fill:var(--hi)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:60;font-weight:600;max-width:90%}
 @media (prefers-reduced-motion:no-preference){.video .play{transition:transform .15s}.video .play:active{transform:scale(.94)}}
 
-.hastimer #app{padding-bottom:calc(170px + env(safe-area-inset-bottom))}
+.hastimer #app{padding-bottom:110px}
 .timer .t{font-size:2rem;min-width:3.6ch}
 .timer>div{gap:8px}
 .timer .lbl{min-width:0}
