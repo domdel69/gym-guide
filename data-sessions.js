@@ -23,7 +23,7 @@ window.SESSIONS=[
   [I('legcurl',3,'10–12',60)],
   [I('crunch',3,'12–15',45),I('deadbug',3,'8 par côté',60)],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur. Optionnel : saute-le si la séance dépasse 60 min.'})]]},
-{id:'b',tab:'Séance B',title:'Séance B',sub:'Dos et définition des pectoraux, environ 59 min',dur:'≈ 59 min',focus:'Dos, pectoraux',
+{id:'b',tab:'Séance B',title:'Séance B',sub:'Dos et définition des pectoraux, environ 60 min',dur:'≈ 60 min',focus:'Dos, pectoraux',
  intro:'Toutes les séries se font à la suite, sans superset. Si une machine est prise, change l’ordre des exercices. Les bras sont en option, après la séance. Les exercices marqués ⇄ ont des variantes : choisis selon ce qui est libre.',
  stations:[
   ...WU(),
@@ -32,7 +32,7 @@ window.SESSIONS=[
   [I('revpecdeck',4,'12–15',60,{alt:ALT_REAR})],
   [I('pecfly',3,'12–15',60)],
   [I('dbrdl',3,'10–12',75)],
-  [I('sideplank',3,'25 s/côté',60,{alt:ALT_CORE})],
+  [I('sideplanktime',3,'45 s/côté',45,{alt:ALT_CORE})],
   [I('shoulderpress',3,'8–10',90)],
   [I('curl',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
   [I('triext',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],

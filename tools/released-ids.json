@@ -94,5 +94,8 @@
  },
  "birddog": {
   "kind": "reps"
+ },
+ "sideplanktime": {
+  "kind": "time"
  }
 }

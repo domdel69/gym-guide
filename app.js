@@ -28,10 +28,47 @@ const stationDone=(sess,i,date=curDate())=>sess.stations[i].every(it=>setsDone(s
 function setsDone(sess,it,date){return Store.get(date,sess.id,E(sess,it,date).ex).filter(s=>s&&s.done).length}
 const first=r=>(String(r).match(/\d+/)||[''])[0];
 
+/* ---------- programme : semaine, semaine allégée, mesures ---------- */
+const D0=d=>{const[y,m,j]=d.split('-').map(Number);return Math.round(Date.UTC(y,m-1,j)/864e5)};
+const addDays=(d,n)=>{const t=new Date((D0(d)+n)*864e5);return t.getUTCFullYear()+'-'+String(t.getUTCMonth()+1).padStart(2,'0')+'-'+String(t.getUTCDate()).padStart(2,'0')};
+const DELOAD_TXT='Mêmes exercices et mêmes charges, 2 séries au lieu de 3–4, sans élévations latérales, sans bras en option, sans finisseur.';
+const PHASE=w=>w===1?{blk:1,name:'Calibrage',note:'3–4 répétitions en réserve. Note tes charges de départ.'}
+  :w===6?{blk:1,name:'Semaine allégée',dl:true,note:'Bilan du bloc 1 : exporte ton journal (Réglages > Sauvegarde) et envoie-le à Claude pour écrire le bloc 2.'}
+  :w===12?{blk:2,name:'Semaine allégée',dl:true,note:'Dernière semaine du programme : bilan complet avec Claude ensuite.'}
+  :{blk:w<6?1:2,name:'Progression',note:'2 répétitions en réserve, dernière série jusqu’à 1.'};
+/* Où en est-on à une date : null (pas de date de départ), {before}, {w,d} (semaine 1 à 12) ou {done}. */
+const weekOf=date=>{const st=Store.d.settings.start;if(!st)return null;const d=D0(date)-D0(st);
+  if(d<0)return{before:-d};const w=Math.floor(d/7)+1;return w>12?{done:true,d}:{w,d}};
+function progCard(){
+  const x=weekOf(Store.today());
+  if(!x)return `<div class="card"><h3>Programme</h3><p class="mute small">Définis la date de ta première séance pour suivre les semaines du programme.</p><button class="btn" data-act="goprog">Définir la date de départ</button></div>`;
+  if(x.before)return `<div class="card"><h3>Programme</h3><p class="mute small">Départ le ${fmtDate(Store.d.settings.start)} : dans ${x.before} jour${x.before>1?'s':''}.</p></div>`;
+  if(x.done)return `<div class="card"><h3>Programme terminé</h3><p class="mute small">Les 12 semaines sont passées. Exporte ton journal (Réglages > Sauvegarde) et fais le bilan avec Claude.</p></div>`;
+  const p=PHASE(x.w),seg=Array.from({length:12},(_,i)=>`<i class="${i+1<x.w?'on':''}${i+1===x.w?' cur':''}${i+1===6||i+1===12?' dl':''}"></i>`).join('');
+  return `<div class="card progcard"><div class="pc-h"><b>Semaine ${x.w} / 12</b><span class="mute small">Bloc ${p.blk} · ${p.name}</span></div>
+   <div class="prog wk" aria-hidden="true">${seg}</div><p class="small mute">${esc(p.note)}</p>${p.dl?`<div class="note deload"><b>Semaine allégée.</b> ${esc(DELOAD_TXT)}</div>`:''}</div>`;
+}
+function sessBanner(date){
+  const x=weekOf(date);if(!x||!x.w)return '';const p=PHASE(x.w);
+  return `<div class="note${p.dl?' deload':''}"><b>Semaine ${x.w} / 12 · ${p.name}.</b> ${esc(p.dl?DELOAD_TXT:p.note)}</div>`;
+}
+const checksList=()=>(Store.d.checks||[]).slice().sort((a,b)=>a.date<b.date?-1:1);
+/* Mesures et photos : toutes les 6 semaines à partir du départ, puis de la dernière mesure. */
+function nextCheck(){
+  const st=Store.d.settings.start;if(!st)return null;const c=checksList(),last=c.length?c[c.length-1].date:null;
+  const due=addDays(last&&last>=st?last:st,42);return{due,off:D0(due)-D0(Store.today())}}
+function checkCard(){
+  const n=nextCheck();if(!n||n.off>7)return '';
+  const t=n.off<0?`En retard de ${-n.off} jour${-n.off>1?'s':''} (prévu le ${fmtDate(n.due)})`:n.off===0?'À faire aujourd’hui':`À faire d’ici le ${fmtDate(n.due)} (dans ${n.off} jour${n.off>1?'s':''})`;
+  return `<div class="card"><h3>Mesures et photos</h3><p class="small"><b>${t}</b></p><p class="mute small">Tour de taille et photos de face, de profil et de dos, comme la série de départ.</p>
+   <div class="inline"><input id="waist" inputmode="decimal" placeholder="Tour de taille (cm), optionnel" aria-label="Tour de taille en centimètres"><button class="btn primary" data-act="checkdone">Fait aujourd’hui</button></div></div>`;
+}
+
 function viewHome(){
   const card=sid=>{const s=sessOf(sid),ld=Store.lastDate(sid);
     return `<button class="home-card" data-act="sess" data-id="${sid}"><span class="hc-t"><b>${esc(s.title)}</b><span>${esc(s.dur)} · ${esc(s.focus)}</span><span class="small">${ld?'Dernière fois : '+fmtDay(ld):'Pas encore faite'}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
   return `<h1>Gym Guide</h1><div class="mute">${fmtDay(Store.today())}</div>
+   ${progCard()}${checkCard()}
    <h2>À la salle</h2><div class="list">${card('a')}${card('b')}${card('c')}</div>
    <h2>À la maison</h2><div class="list">${card('home')}</div>`;
 }
@@ -66,6 +103,7 @@ function viewTrain(){
   return `<div class="top"><button class="btn sm" data-act="choice">‹ Retour</button></div>
    <h1>${esc(sess.title)}</h1><div class="mute">${esc(sess.sub)}</div>
    ${edit?`<div class="note editing">Modification de la séance du <b>${fmtDay(S.date)}</b>. Les changements remplacent les chiffres enregistrés ce jour-là.</div>`:''}
+   ${sessBanner(curDate())}
    <p class="mute small" style="margin-top:10px">${esc(sess.intro)}</p>
    <div class="small mute">${edit?fmtDate(S.date):'Aujourd’hui'} : ${done}/${sess.stations.length} stations faites</div>
    <div class="list">${rows}</div>`;
@@ -84,8 +122,8 @@ function viewStation(sess,si){
     const cls='set'+(s.done?' done':'')+(kind==='tick'?' t1':'');
     sets+=`<div class="${cls}"><span class="n">${k+1}</span>`+
      (kind==='tick'?`<span>${esc(it.reps)}</span>`:
-      `<div><label for="r${k}">Reps</label><input id="r${k}" inputmode="numeric" pattern="[0-9]*" value="${esc(r)}" placeholder="${ps&&ps.reps!=null?ps.reps:first(it.reps)}" data-act="inp"></div>`+
-      (kind==='reps'?`<div class="mute small">${it.side?'':''}</div>`:`<div><label for="w${k}">${kind==='assist'?'Assist. kg':'kg'}</label><input id="w${k}" inputmode="decimal" value="${esc(w)}" placeholder="${ps&&ps.kg!=null?esc(ps.kg):'kg'}" data-act="inp"></div>`))+
+      `<div><label for="r${k}">${kind==='time'?'Durée (s)':'Reps'}</label><input id="r${k}" inputmode="numeric" pattern="[0-9]*" value="${esc(r)}" placeholder="${ps&&ps.reps!=null?ps.reps:first(it.reps)}" data-act="inp"></div>`+
+      (kind==='reps'||kind==='time'?`<div class="mute small">${it.side?'':''}</div>`:`<div><label for="w${k}">${kind==='assist'?'Assist. kg':'kg'}</label><input id="w${k}" inputmode="decimal" value="${esc(w)}" placeholder="${ps&&ps.kg!=null?esc(ps.kg):'kg'}" data-act="inp"></div>`))+
      `<button class="ok" data-act="tick" data-k="${k}" aria-pressed="${!!s.done}" aria-label="Série ${k+1} faite">✓</button></div>`;
   }
   const lastTxt=prev?`Dernière fois (${fmtDate(prev.date)}) : `+prev.sets.map(s=>(s.reps!=null?s.reps:'')+(s.kg!=null&&s.kg!==''?'×'+s.kg+' kg':'')).join(' · '):'Première fois : note tes charges de départ.';
@@ -165,6 +203,7 @@ function onAct(e){
   else if(a==='list'){S.st=null;render()}
   else if(a==='ex'){S.exi=+b.dataset.k;S.vid=false;render()}
   else if(a==='vid'){S.vid=true;render()}
+  else if(a==='goprog'){S.tab='settings';S.open.program=true;S.st=null;persist();scrollTo(0,0);render()}
   else if(a==='alt'){Store.pickSet(curDate(),sess.id,b.dataset.base,b.dataset.ex);S.vid=false;render()}
   else if(a==='tick')onTick(+b.dataset.k);
   else if(a==='prev'&&S.st>0)goStation(S.st-1);

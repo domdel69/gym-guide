@@ -1,5 +1,5 @@
 /* Exercices : nom anglais (en), libellé français (fr), conseils, erreurs, vidéo YouTube par défaut (yt).
-   kind : lift = reps + charge, assist = reps + assistance, reps = reps seules, tick = coché seulement. */
+   kind : lift = reps + charge, assist = reps + assistance, reps = reps seules, time = durée en secondes (stockée dans reps), tick = coché seulement. */
 window.EX = {
 bike:{en:'Stationary bike',fr:'Vélo',kind:'tick',yt:'rlOOqDgDU3U',
   cues:['Hauteur de selle : genou légèrement fléchi en bas de la pédale.','Allure facile : tu peux parler en phrases complètes.','Pousse avec tout le pied, pas sur la pointe.'],
@@ -64,8 +64,8 @@ revpecdeck:{en:'Reverse pec deck',fr:'Oiseau à la machine',kind:'lift',yt:'R63U
 dbrdl:{en:'Dumbbell Romanian deadlift',fr:'Soulevé de terre roumain aux haltères',kind:'lift',yt:'3USggQXRw_U',
   cues:['Pieds largeur de hanches, haltères devant les cuisses, genoux souples.','Recule le bassin, dos plat, haltères qui glissent le long des jambes jusqu’à sentir les ischio-jambiers.','Pousse le bassin vers l’avant pour te redresser et serre les fessiers.'],
   avoid:'Arrondir le bas du dos, plier les genoux comme pour un squat ou descendre les haltères loin des jambes.',note:'Ischio-jambiers et fessiers.'},
-sideplank:{en:'Side plank',fr:'Gainage latéral',kind:'tick',yt:'Np5FR3qN3Gg',
-  cues:['Sur l’avant-bras, coude sous l’épaule, pieds empilés ou décalés.','Soulève le bassin : de la tête aux pieds, le corps forme une ligne droite.','Tiens 25 s, respire, puis change de côté. Si l’épaule gêne, passe au bird dog.'],
+sideplanktime:{en:'Side plank',fr:'Gainage latéral',kind:'time',yt:'Np5FR3qN3Gg',
+  cues:['Sur l’avant-bras, coude sous l’épaule, pieds empilés ou décalés.','Soulève le bassin : de la tête aux pieds, le corps forme une ligne droite.','Tiens la durée prévue (départ : 45 s), respire, puis change de côté. Si l’épaule gêne, passe au bird dog.'],
   avoid:'Bassin qui s’affaisse ou buste qui bascule vers l’avant.',note:'Anti-rotation, abdominaux profonds.'},
 bandfacepull:{en:'Band face pull',fr:'Face pull à l’élastique',kind:'reps',yt:'JBpj9-3tP0c',
   cues:['Élastique fixé à hauteur du visage sur un montant solide : recule jusqu’à ce qu’il soit tendu.','Tire vers le front en écartant les mains, coudes hauts.','Omoplates serrées, pause d’une seconde, reviens lentement.'],
@@ -100,4 +100,4 @@ chintuck:{en:'Chin tucks and thoracic extension',fr:'Rétractions du menton et e
 };
 
 /* Renommages : ancien identifiant -> nouvel identifiant. Le journal enregistré est migré au démarrage. Ne supprime jamais un identifiant sans l’ajouter ici. */
-window.ALIASES={};
+window.ALIASES={sideplank:'sideplanktime'};

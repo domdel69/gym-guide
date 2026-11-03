@@ -37,6 +37,7 @@ def setbox(n,total,kind):
     if n>=total:return '<div><div class="set off"></div></div>'
     if kind in('tick',):return '<div><div class="set"><span style="position:absolute;left:1.5mm;top:2.8mm"><span class="cb"></span></span></div></div>'
     if kind=='reps':return '<div><div class="set"><u class="a">reps</u></div></div>'
+    if kind=='time':return '<div><div class="set"><u class="a">secondes</u></div></div>'
     return '<div><div class="set"><i></i><u class="a">reps</u><u class="b">kg</u></div></div>'
 def altline(it):
     if not it.get('alt'):return ''

@@ -16,7 +16,8 @@ function spark(vals){
 
 /* ---------- Suivi ---------- */
 const nf=v=>String(Number(Number(v).toFixed(1))).replace('.',',');
-const setTxt=(s,kind)=>(s.reps!=null?s.reps:'–')+(kind==='reps'||s.kg==null||s.kg===''?'':' × '+nf(s.kg)+' kg');
+const noKg=k=>k==='reps'||k==='time';
+const setTxt=(s,kind)=>(s.reps!=null?s.reps:'–')+(kind==='time'?' s':'')+(noKg(kind)||s.kg==null||s.kg===''?'':' × '+nf(s.kg)+' kg');
 const kgOf=(sets,kind)=>{const k=sets.map(x=>x.kg).filter(v=>v!=null&&v!=='');return k.length?(kind==='assist'?Math.min(...k):Math.max(...k)):null};
 const repsOf=sets=>{const r=sets.map(x=>x.reps).filter(v=>v!=null);return r.length?Math.max(...r):null};
 
@@ -50,14 +51,14 @@ function viewExercise(id){
   const back=`<div class="top"><button class="btn sm" data-act="pback">‹ Suivi</button></div>`;
   if(!h.length)return back+`<h1>${esc(inf.en)}</h1><div class="card"><p>Aucune série enregistrée.</p></div>`;
   const asc=h.slice().reverse(),kind=inf.kind;
-  const kgPts=kind==='reps'?[]:asc.map(x=>({date:x.date,v:kgOf(x.sets,kind)})).filter(p=>p.v!=null);
+  const kgPts=noKg(kind)?[]:asc.map(x=>({date:x.date,v:kgOf(x.sets,kind)})).filter(p=>p.v!=null);
   const repPts=asc.map(x=>({date:x.date,v:repsOf(x.sets)})).filter(p=>p.v!=null);
   const best=kgPts.length?(kind==='assist'?Math.min(...kgPts.map(p=>p.v)):Math.max(...kgPts.map(p=>p.v))):null;
   const rows=h.map(x=>`<li><b>${fmtDay(x.date)}</b> <span class="mute small">${x.sids.map(sid=>esc(Store.sessTitle(x.date,sid).split(' : ')[0])).join(', ')}</span><div>${x.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}${kind==='assist'?' <span class="mute small">(assistance)</span>':''}</div></li>`).join('');
   return back+`<h1>${esc(inf.en)}</h1><div class="mute">${esc(inf.fr)}${inf.live?'':' · ancien exercice'}</div>
    <p class="small mute" style="margin-top:8px">${h.length} séance${h.length>1?'s':''}${best!=null?` · ${kind==='assist'?'assistance la plus basse':'meilleure charge'} : <b style="color:var(--ink)">${nf(best)} kg</b>`:''}</p>
    ${kgPts.length?chart(kgPts,{title:kind==='assist'?'Assistance (kg)':'Charge (kg)',unit:' kg',note:kind==='assist'?'Plus bas = mieux. Valeur la plus basse de chaque séance.':'Charge la plus haute de chaque séance.'}):''}
-   ${chart(repPts,{title:'Répétitions',unit:' reps',note:'Meilleure série de chaque séance.'})}
+   ${chart(repPts,{title:kind==='time'?'Durée (s)':'Répétitions',unit:kind==='time'?' s':' reps',note:kind==='time'?'Durée la plus longue de chaque séance.':'Meilleure série de chaque séance.'})}
    <div class="card"><h3>Historique</h3><ul class="plain">${rows}</ul></div>`;
 }
 
@@ -75,7 +76,7 @@ function viewProgress(){
   }
   const {live,old}=Store.trackedIds();
   const card=id=>{const inf=Store.info(id),h=Store.history(id),l=h[0],kind=inf.kind;
-    const ser=h.slice().reverse().slice(-12).map(x=>kind==='reps'?repsOf(x.sets):kgOf(x.sets,kind)).filter(v=>v!=null);
+    const ser=h.slice().reverse().slice(-12).map(x=>noKg(kind)?repsOf(x.sets):kgOf(x.sets,kind)).filter(v=>v!=null);
     return `<button class="home-card ex" data-act="exdetail" data-ex="${esc(id)}"><span class="hc-t"><b>${esc(inf.en)}</b><span>${esc(inf.fr)}</span><span class="small">${fmtDate(l.date)} : ${l.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
   return `<h1>Suivi</h1>${seg}<p class="mute small">Touche un exercice pour voir l’évolution des reps et de la charge.</p>
    <div class="list">${live.map(card).join('')}</div>${old.length?`<h2>Anciens exercices</h2><div class="list">${old.map(card).join('')}</div>`:''}`;
@@ -96,6 +97,7 @@ function viewSettings(){
     <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label></div>
    <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button>
     ${prev.length&&!inArchive?`<details class="sub" data-k="versions"${S.open.versions?' open':''}><summary>Versions précédentes</summary><p class="mute small">Si la dernière version pose problème, ouvre une version précédente. Le journal est partagé : tes séries restent visibles.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.map(v=>`<a class="btn sm" href="releases/${esc(v)}/">Version ${esc(v)}</a>`).join('')}</div></details>`:''}</div>
+   ${fold('program','Programme',progBody())}
    ${fold('backup','Sauvegarde',`<p class="mute small">Tes séries sont enregistrées sur ce téléphone seulement. Exporte un fichier de temps en temps.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div>
     <p class="mute small" style="margin-top:14px">Effacer supprime toutes les séries enregistrées sur ce téléphone. Les liens vidéo et les options sont conservés. Exporte d’abord si tu veux garder une copie.</p>
@@ -106,6 +108,18 @@ function viewSettings(){
    ${fold('videos','Vidéos',`<p class="mute small">Colle un lien YouTube ou un identifiant. Vide : retour à la vidéo par défaut. Si une vidéo refuse la lecture intégrée, remplace-la ici.</p>${vids}`)}`;
 }
 
+function progBody(){
+  const st=Store.d.settings.start,x=weekOf(Store.today()),n=nextCheck(),cs=checksList();
+  const state=!st?'Pas de date de départ.':x.before?`Départ dans ${x.before} jour${x.before>1?'s':''}.`:x.done?'Les 12 semaines sont passées.':`Aujourd’hui : semaine ${x.w} / 12.`;
+  const hist=cs.length?`<ul class="plain">${cs.slice().reverse().map(c=>`<li><b>${fmtDay(c.date)}</b>${c.waist!=null?' : '+esc(nf(c.waist))+' cm':''} <button class="lnk" data-act="checkdel" data-d="${esc(c.date)}" aria-label="Supprimer la mesure du ${fmtDate(c.date)}">Supprimer</button></li>`).join('')}</ul>`:'<p class="mute small">Aucune mesure notée.</p>';
+  return `<p class="mute small">Date de la première séance : elle fixe la semaine 1 du programme de 12 semaines (deux blocs de 6 semaines, semaines 6 et 12 allégées).</p>
+   <input type="date" class="datein" data-start value="${st?esc(st):''}" aria-label="Date de la première séance">
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" data-act="startnow">Aujourd’hui</button><button class="btn" data-act="startclear">Effacer la date</button></div>
+   <p class="small" style="margin-top:8px">${state}${st?` Semaine 1 : ${fmtDate(st)}. Fin du programme : ${fmtDate(addDays(st,83))}.`:''}</p>
+   <h3 style="margin-top:16px">Mesures et photos</h3>
+   <p class="mute small">Tour de taille et photos (face, profil, dos) toutes les 6 semaines.${n?` Prochaines : ${fmtDate(n.due)}.`:''} Les chiffres restent sur ce téléphone.</p>
+   <div class="inline"><input id="waist" inputmode="decimal" placeholder="Tour de taille (cm), optionnel" aria-label="Tour de taille en centimètres"><button class="btn" data-act="checkdone">Mesure faite aujourd’hui</button></div>${hist}`;
+}
 async function exportBackup(){
   const text=Store.exportJson(),name='gym-guide-'+Store.today()+'.json';
   try{const f=new File([text],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
@@ -116,6 +130,11 @@ window.onViewAct=async(a,b)=>{
   else if(a==='exdetail'){S.tab='progress';S.prog.ex=b.dataset.ex;persist();scrollTo(0,0);render()}
   else if(a==='pback'){S.prog.ex=null;scrollTo(0,0);render()}
   else if(a==='undo'){if(confirm('Restaurer l’état conservé ? L’état actuel sera conservé à sa place.')){try{Store.undo();toast('État restauré');render()}catch(e){toast('Rien à restaurer')}}}
+  else if(a==='startnow'){Store.d.settings.start=Store.today();Store.save();toast('Départ : aujourd’hui');render()}
+  else if(a==='startclear'){Store.d.settings.start=null;Store.save();toast('Date effacée');render()}
+  else if(a==='checkdone'){const el=$('#waist'),v=el&&el.value.trim()?num(el.value):null,td=Store.today();
+    Store.d.checks=(Store.d.checks||[]).filter(c=>c.date!==td);Store.d.checks.push(v!=null?{date:td,waist:v}:{date:td});Store.save();toast('Mesure notée');render()}
+  else if(a==='checkdel'){Store.d.checks=(Store.d.checks||[]).filter(c=>c.date!==b.dataset.d);Store.save();render()}
   else if(a==='export')exportBackup();
   else if(a==='copy'){try{await navigator.clipboard.writeText(Store.exportJson());toast('Copié')}catch(e){toast('Copie impossible : utilise Exporter')}}
   else if(a==='clearlog'){const n=Store.dates().length;if(confirm('Effacer le journal ('+n+' jour'+(n>1?'s':'')+' enregistré'+(n>1?'s':'')+') ? Cette action est définitive.')){Store.clearLog();toast('Journal effacé');render()}}
@@ -131,6 +150,7 @@ document.addEventListener('change',e=>{
     if(!raw){delete Store.d.settings.videos[id];Store.save();toast('Vidéo par défaut rétablie');render();return}
     const p=Store.parseYt(raw);if(!p){toast('Lien YouTube invalide');render();return}
     if(p===EX[id].yt)delete Store.d.settings.videos[id];else Store.d.settings.videos[id]=p;Store.save();toast('Vidéo enregistrée');render()}
+  else if(t.dataset.start!==undefined){Store.d.settings.start=t.value||null;Store.save();toast(t.value?'Date de départ enregistrée':'Date effacée');render()}
   else if(t.dataset.opt){Store.d.settings[t.dataset.opt]=t.checked;Store.save()}
   else if(t.id==='imp'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{Store.importJson(r.result);toast('Sauvegarde importée');render()}catch(x){toast('Fichier non reconnu')}};r.readAsText(t.files[0])}
 });
