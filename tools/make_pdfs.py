@@ -19,13 +19,14 @@ h1{font-size:19pt;margin:0}.sub{color:#444;margin:1mm 0 2mm}
 .cb{display:inline-block;width:3.2mm;height:3.2mm;border:.8pt solid #111;vertical-align:-.5mm;margin-right:1.2mm}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
 th{font-size:8pt;text-transform:uppercase;letter-spacing:.04em;text-align:left;border-bottom:1pt solid #111;padding:1mm 1.2mm}
-td{border-bottom:.6pt solid #999;padding:.9mm 1.2mm;vertical-align:top}
+td{border-bottom:.6pt solid #999;padding:.6mm 1.2mm;vertical-align:top}
 tr.st td{border-top:1pt solid #111}
 .n{font-weight:700;font-size:12pt;text-align:center}
-.en{font-weight:700;font-size:10.5pt}.fr{color:#444;font-style:italic;font-size:8.5pt}
+.en{font-weight:700;font-size:10pt}.fr{color:#444;font-style:italic;font-size:8pt}
 .obj{font-weight:700;font-size:11pt;white-space:nowrap}.rest{font-size:8.5pt;color:#444}
-.cue{font-size:8pt;color:#333;margin-top:.8mm}
-.set{border:.8pt solid #555;border-radius:1.2mm;height:9.8mm;position:relative;margin:0 .6mm}
+.cue{font-size:7.6pt;color:#333;margin-top:.5mm}
+.alt{font-size:7.3pt;color:#222;font-style:italic;margin-top:.3mm}
+.set{border:.8pt solid #555;border-radius:1.2mm;height:8.4mm;position:relative;margin:0 .6mm}
 .set i{position:absolute;left:0;right:0;top:50%;border-top:.5pt solid #bbb}
 .set u{position:absolute;right:1mm;font-size:6pt;color:#666;text-decoration:none}.set u.a{top:.6mm}.set u.b{bottom:.6mm}
 .set.off{background:#eee;border-color:#bbb}
@@ -34,9 +35,13 @@ tr.st td{border-top:1pt solid #111}
 """
 def setbox(n,total,kind):
     if n>=total:return '<div><div class="set off"></div></div>'
-    if kind in('tick',):return '<div><div class="set"><span style="position:absolute;left:1.5mm;top:3.5mm"><span class="cb"></span></span></div></div>'
+    if kind in('tick',):return '<div><div class="set"><span style="position:absolute;left:1.5mm;top:2.8mm"><span class="cb"></span></span></div></div>'
     if kind=='reps':return '<div><div class="set"><u class="a">reps</u></div></div>'
     return '<div><div class="set"><i></i><u class="a">reps</u><u class="b">kg</u></div></div>'
+def altline(it):
+    if not it.get('alt'):return ''
+    names=' · '.join(EX[a['ex']].get('sh') or EX[a['ex']]['fr'] for a in it['alt'])
+    return f"<div class='alt'>Ou : {e(names)}</div>"
 def rows(sess):
     out=[];maxn=max(it['sets'] for st in sess['stations'] if not st[0].get('warm') for it in st)
     num=0
@@ -51,7 +56,7 @@ def rows(sess):
             obj=f"{it['sets']} × {it['reps']}" if (it['sets']>1 or ex['kind']!='tick') else it['reps']
             rest=f"repos {it['rest']} s" if it['rest'] else ''
             boxes=''.join(setbox(n,it['sets'],ex['kind']) for n in range(maxn))
-            out.append(f"<tr{cls}><td class='n'>{lab}</td><td><div class='en'>{e(ex['en'])}</div><div class='fr'>{e(ex['fr'])}</div><div class='cue'>{e(note or cue)}</div></td>"
+            out.append(f"<tr{cls}><td class='n'>{lab}</td><td><div class='en'>{e(ex['en'])}</div><div class='fr'>{e(ex['fr'])}</div><div class='cue'>{e(note or cue)}</div>{altline(it)}</td>"
                        f"<td><div class='obj'>{e(obj)}</div><div class='rest'>{rest}</div></td><td><div class='sets'>{boxes}</div></td></tr>")
     return ''.join(out),maxn
 def page(sid,warm):
@@ -61,9 +66,9 @@ def page(sid,warm):
     if warm:
         items=''.join(f"<span class='it'><span class='cb'></span>{e(EX[it['ex']]['en'])} <span style='color:#555'>({e(it['reps'])})</span></span>" for st in s['stations'] if st[0].get('warm') for it in st)
         wu=f"<div class='wu'><b>Échauffement 6 min</b>{items}</div>"
-    w=f"<table><colgroup><col style='width:9mm'><col style='width:92mm'><col style='width:28mm'><col></colgroup><tr><th></th><th>Exercice</th><th>Objectif</th><th><div class='sets'>{heads.replace('th','div')}</div></th></tr>{body}</table>"
+    w=f"<table><colgroup><col style='width:9mm'><col style='width:122mm'><col style='width:28mm'><col></colgroup><tr><th></th><th>Exercice</th><th>Objectif</th><th><div class='sets'>{heads.replace('th','div')}</div></th></tr>{body}</table>"
     return f"""<html><head><meta charset='utf-8'><style>{CSS}</style></head><body>
-<div class='meta'><div><h1>{e(s['title'])}</h1><div class='sub'>{e(s['sub'])}</div><div class='legend'>S1–S{maxn} = séries 1 à {maxn} (note les reps et les kg). Case grise = série non prévue. Lettres a / b = superset : alterne les deux exercices.</div></div>
+<div class='meta'><div><h1>{e(s['title'])}</h1><div class='sub'>{e(s['sub'])}</div><div class='legend'>S1–S{maxn} = séries (note les reps et les kg). Case grise = série non prévue. a / b = superset : alterne les deux. Ou : = variantes possibles.</div></div>
 <div class='fields'>Date<span></span>Semaine<span style='width:14mm'></span></div></div>{wu}{w}
 <div class='foot'><span>Charge : laisse 2 reps en réserve. Toutes les séries au haut de la fourchette 2 séances de suite : +2.5–5 %. Douleur tendon ou articulation à 4/10 ou plus : saute l’exercice.</span><span>Gym Guide {e(ver)} · imprimé le {today}</span></div></body></html>"""
 files={'a':('seance-a.pdf',True),'b':('seance-b.pdf',True),'c':('seance-c.pdf',True),'home':('routine-maison.pdf',False)}

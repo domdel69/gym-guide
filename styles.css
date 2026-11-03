@@ -56,6 +56,12 @@ button,a.btn,input,select{min-height:44px}
 .ex-tabs button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 10px;text-align:left;font-weight:600;line-height:1.2}
 .ex-tabs button small{display:block;font-weight:500;color:var(--mute)}
 .ex-tabs button[aria-selected="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.alts{margin:10px 0 2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 13px;font-weight:600;font-size:.92rem;line-height:1.2;color:inherit}
+.chip small{color:var(--mute);font-weight:500;margin-left:6px}
+.chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.row .t .alt-hint{font-size:.78rem;color:var(--accent);font-weight:600}
 .name-en{font-size:1.5rem;font-weight:800;line-height:1.1;letter-spacing:-.01em}
 .name-fr{color:var(--mute);font-style:italic;margin-top:2px}
 .video{position:relative;aspect-ratio:16/9;border-radius:var(--r);overflow:hidden;background:linear-gradient(135deg,#17303d,#0f766e);margin:12px 0;display:grid;place-items:center}

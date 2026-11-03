@@ -7,6 +7,11 @@ const WU=()=>[
   [I('bandpull',1,'15',0,{warm:true})],
   [I('bander',1,'12 par côté',0,{warm:true})],
   [I('ankle',1,'10 par sens',0,{warm:true})]];
+/* Variantes : alt = autres exercices possibles pour la même station (choisis dans l’app selon ce qui est libre).
+   Chaque entrée peut remplacer sets, reps, rest ou note ; sinon elle reprend ceux de l’exercice prévu. */
+const ALT_REAR=[{ex:'bandfacepull'},{ex:'rearraise'},{ex:'facepull'}];
+const ALT_HINGE=[{ex:'backext',reps:'12–15'},{ex:'bridge',reps:'12–15'},{ex:'pullthrough'}];
+const ALT_CORE=[{ex:'bandpallof',reps:'10 par côté'},{ex:'birddog',reps:'8 par côté'},{ex:'pallof',reps:'10 par côté'}];
 window.SESSIONS=[
 {id:'a',tab:'Séance A',title:'Séance A',sub:'Pectoraux et bas du corps, environ 60 min',dur:'≈ 60 min',focus:'Pectoraux, bas du corps',
  intro:'Les exercices sur machine se font en séries successives. Seules les stations à deux exercices s’enchaînent : une machine ou une poulie avec un exercice à l’élastique, au tapis ou aux haltères. Une série du premier, repos, une série du second, et ainsi de suite. Si une machine est prise, change l’ordre des exercices.',
@@ -20,21 +25,21 @@ window.SESSIONS=[
   [I('crunch',3,'12–15',45),I('deadbug',3,'8 par côté',60)],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur. Optionnel : saute-le si la séance dépasse 60 min.'})]]},
 {id:'b',tab:'Séance B',title:'Séance B',sub:'Dos et définition des pectoraux, environ 59 min',dur:'≈ 59 min',focus:'Dos, pectoraux',
- intro:'Toutes les séries se font à la suite, sans superset. Si une machine est prise, change l’ordre des exercices. Les bras sont en option, après la séance.',
+ intro:'Toutes les séries se font à la suite, sans superset. Si une machine est prise, change l’ordre des exercices. Les bras sont en option, après la séance. Les exercices marqués ⇄ ont des variantes : choisis selon ce qui est libre.',
  stations:[
   ...WU(),
   [I('pullup',4,'5–8',90)],
   [I('incline',4,'8–12',90)],
-  [I('revpecdeck',4,'12–15',60)],
+  [I('revpecdeck',4,'12–15',60,{alt:ALT_REAR})],
   [I('pecfly',3,'12–15',60)],
-  [I('dbrdl',3,'10–12',75)],
-  [I('sideplank',3,'25 s/côté',60)],
+  [I('dbrdl',3,'10–12',75,{alt:ALT_HINGE})],
+  [I('sideplank',3,'25 s/côté',60,{alt:ALT_CORE})],
   [I('shoulderpress',3,'8–10',90)],
   [I('curl',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
   [I('triext',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur. Optionnel : saute-le si la séance dépasse 60 min.'})]]},
 {id:'c',tab:'Séance C',title:'Séance C : rattrapage',sub:'Environ 64 min',dur:'≈ 64 min',focus:'Rattrapage',
- intro:'À utiliser quand une seule séance rentre dans la semaine, et pendant la semaine de Noël. Elle remplace une séance manquée, elle ne s’ajoute jamais.',
+ intro:'À utiliser quand une seule séance rentre dans la semaine, et pendant la semaine de Noël. Elle remplace une séance manquée, elle ne s’ajoute jamais. Les exercices marqués ⇄ ont des variantes : choisis selon ce qui est libre.',
  stations:[
   ...WU(),
   [I('legpress',3,'10',90,{note:'Même charge qu’en séance A.'})],
@@ -42,8 +47,8 @@ window.SESSIONS=[
   [I('row',3,'10–12',75)],
   [I('pullup',3,'6–8',90,{note:'Si tu ne connais pas encore ton assistance, fais 3×8–12 au tirage vertical.'})],
   [I('pecfly',2,'12–15',60)],
-  [I('dbrdl',2,'12',75)],
-  [I('revpecdeck',2,'15',60)],
+  [I('dbrdl',2,'12',75,{alt:ALT_HINGE})],
+  [I('revpecdeck',2,'15',60,{alt:ALT_REAR})],
   [I('crunch',2,'12–15',45),I('deadbug',2,'8 par côté',60)],
   [I('bike',1,'5 min',0,{note:'Finisseur, allure facile. Vélo ou rameur.'})]]},
 {id:'home',tab:'Maison',title:'Routine maison H',sub:'15 min, 2 à 3 fois par semaine',dur:'15 min',focus:'2 à 3 fois par semaine',

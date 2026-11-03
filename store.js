@@ -87,7 +87,12 @@ const Store=(()=>{
   const lastDate=(sid,before)=>{for(const dt of dates().reverse()){if(before&&dt>=before)continue;const L=d.log[dt][sid];if(L&&Object.keys(L).some(ex=>doneSets(L[ex]).length))return dt}return null};
   /* Dates où la séance sid a des séries cochées, de la plus récente à la plus ancienne. */
   const sessionDates=sid=>dates().reverse().filter(dt=>d.log[dt][sid]&&Object.keys(d.log[dt][sid]).some(ex=>doneSets(d.log[dt][sid][ex]).length));
-  const resetSession=(date,sid)=>{stash('avant nouvelle séance');if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}delete d.meta.sess[date+'|'+sid];save()};
+  /* Variantes choisies : pick[date][séance][exercice prévu] = exercice choisi. Ajout au format, absent = exercice prévu. */
+  const pickGet=(date,sid,base)=>(((d.pick||{})[date]||{})[sid]||{})[base]||null;
+  const pickSet=(date,sid,base,ex)=>{d.pick=d.pick||{};const P=(d.pick[date]=d.pick[date]||{});const Q=(P[sid]=P[sid]||{});
+    if(!ex||ex===base)delete Q[base];else Q[base]=ex;
+    if(!Object.keys(Q).length)delete P[sid];if(!Object.keys(P).length)delete d.pick[date];save()};
+  const resetSession=(date,sid)=>{stash('avant nouvelle séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}delete d.meta.sess[date+'|'+sid];save()};
   const countDone=(date,sid)=>{const L=(d.log[date]||{})[sid]||{};return Object.keys(L).reduce((n,ex)=>n+doneSets(L[ex]).length,0)};
 
   const videoId=ex=>d.settings.videos[ex]||(EX[ex]||{}).yt||'';
@@ -100,10 +105,10 @@ const Store=(()=>{
   const undo=()=>{const u=JSON.parse(localStorage.getItem(UNDO)||'null');if(!u)throw new Error('none');
     stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
 
-  return{d,save,today,get,setSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,
+  return{d,save,today,get,setSet,pickGet,pickSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
       stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},
-    clearLog:()=>{stash('avant effacement');d.log={};d.meta.sess={};Store.d=d;save()},
+    clearLog:()=>{stash('avant effacement');d.log={};d.pick={};d.meta.sess={};Store.d=d;save()},
     reset:()=>{stash('avant réinitialisation');d=defaults();Store.d=d;save()}};
 })();

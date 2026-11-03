@@ -20,6 +20,7 @@ Personal gym programme web app (PWA, French UI). Hosted on GitHub Pages, logs st
 ## Keeping the log consistent when the programme changes
 The phone log is `log[date][sessionId][exerciseId] = [{reps, kg, done, t}]`, plus `meta` (name and type snapshot per exercise and session). Rules:
 - Exercise ids are permanent. A variation with a different movement gets a new id. Never reuse an id for another movement.
+- Alternatives for a station: `alt:[{ex:'id', reps:'…'}]` on a session item (see `ALT_*` in `data-sessions.js`). Every alternative is a normal exercise with its own permanent id; the choice per date is stored in `pick[date][session][planned id]`, sets are logged under the chosen id. Listed on the PDFs ("Ou :") and as chips in the app.
 - Rename or merge an exercise: keep the new id and add `oldId:'newId'` to `window.ALIASES` in `data-ex.js`. The log, the video override and the Suivi history are migrated at startup, after a safety copy (`preMigration`).
 - Retire an exercise: remove it from the sessions only; keep it in `EX` (or alias it). Its history stays in the Suivi under "Anciens exercices".
 - Do not change an exercise `kind` (lift, assist, reps, tick) once released.

@@ -21,8 +21,11 @@ const TABS=[['train','Accueil'],['progress','Suivi'],['guides','Guides'],['setti
 
 /* ---------- séances ---------- */
 const curDate=()=>S.date||Store.today();
-const stationDone=(sess,i,date=curDate())=>sess.stations[i].every(it=>setsDone(sess,it,date)>=it.sets);
-function setsDone(sess,it,date){return Store.get(date,sess.id,it.ex).filter(s=>s&&s.done).length}
+/* Exercice effectif d’une station : l’exercice prévu, ou la variante choisie pour cette date (it.alt). */
+const E=(sess,it,date=curDate())=>{if(!it.alt)return it;const id=Store.pickGet(date,sess.id,it.ex),a=id&&it.alt.find(x=>x.ex===id);
+  return a&&EX[id]?Object.assign({},it,a,{alt:it.alt,base:it.ex}):it};
+const stationDone=(sess,i,date=curDate())=>sess.stations[i].every(it=>setsDone(sess,it,date)>=E(sess,it,date).sets);
+function setsDone(sess,it,date){return Store.get(date,sess.id,E(sess,it,date).ex).filter(s=>s&&s.done).length}
 const first=r=>(String(r).match(/\d+/)||[''])[0];
 
 function viewHome(){
@@ -57,8 +60,8 @@ function viewTrain(){
   const rows=sess.stations.map((st,i)=>{
     const d=stationDone(sess,i),head=hasWarm&&(i===0||isWarm(sess,i-1)!==isWarm(sess,i))?`<h2>${isWarm(sess,i)?'Échauffement · 6 min':'Séance'}</h2>`:'';
     return head+`<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':stLabel(sess,i).n}</span><span class="t">`+
-      st.map(it=>`<b>${esc(EX[it.ex].en)}</b><span>${esc(EX[it.ex].fr)}</span>`).join('')+
-      `</span><span class="sr">${st.map(it=>it.sets>1||EX[it.ex].kind!=='tick'?`${it.sets}×${esc(it.reps)}`:esc(it.reps)).join('<br>')}</span></button>`}).join('');
+      st.map(r=>{const it=E(sess,r);return `<b>${esc(EX[it.ex].en)}</b><span>${esc(EX[it.ex].fr)}</span>`+(r.alt?`<span class="alt-hint">⇄ ${r.alt.length+1} variantes</span>`:'')}).join('')+
+      `</span><span class="sr">${st.map(r=>{const it=E(sess,r);return it.sets>1||EX[it.ex].kind!=='tick'?`${it.sets}×${esc(it.reps)}`:esc(it.reps)}).join('<br>')}</span></button>`}).join('');
   const edit=S.date!==Store.today();
   return `<div class="top"><button class="btn sm" data-act="choice">‹ Retour</button></div>
    <h1>${esc(sess.title)}</h1><div class="mute">${esc(sess.sub)}</div>
@@ -69,9 +72,9 @@ function viewTrain(){
 }
 
 function viewStation(sess,si){
-  const st=sess.stations[si],it=st[Math.min(S.exi,st.length-1)],ex=EX[it.ex],date=curDate();
+  const st=sess.stations[si],raw=st[Math.min(S.exi,st.length-1)],date=curDate(),it=E(sess,raw,date),ex=EX[it.ex];
   const prog=sess.stations.map((_,i)=>`<i class="${stationDone(sess,i)?'on':''}${i===si?' cur':''}"></i>`).join('');
-  const tabs=st.length>1?`<div class="ex-tabs">`+st.map((x,k)=>`<button data-act="ex" data-k="${k}" aria-selected="${k===S.exi}">${esc(EX[x.ex].en)}<small>${setsDone(sess,x,date)}/${x.sets} séries</small></button>`).join('')+`</div>`:'';
+  const tabs=st.length>1?`<div class="ex-tabs">`+st.map((x,k)=>`<button data-act="ex" data-k="${k}" aria-selected="${k===S.exi}">${esc(EX[E(sess,x,date).ex].en)}<small>${setsDone(sess,x,date)}/${E(sess,x,date).sets} séries</small></button>`).join('')+`</div>`:'';
   const prev=Store.last(it.ex,date),logged=Store.get(date,sess.id,it.ex);
   const kind=ex.kind;let sets='';
   for(let k=0;k<it.sets;k++){
@@ -89,11 +92,12 @@ function viewStation(sess,si){
   const vid=Store.videoId(it.ex),vok=/^[A-Za-z0-9_-]{11}$/.test(vid);
   const video=!vok?`<div class="novid"><span>Pas de vidéo par défaut.</span><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Chercher une démo ↗</a></div>`:S.vid&&vok?`<iframe src="https://www.youtube-nocookie.com/embed/${vid}?playsinline=1&rel=0&autoplay=1" title="${esc(ex.en)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
     :`<button class="play" data-act="vid" aria-label="Lire la vidéo"></button>`;
+  const chips=raw.alt?`<div class="alts"><span class="mute small">Variante : choisis selon ce qui est libre</span><div class="chips">`+[{ex:raw.ex}].concat(raw.alt).map(o=>`<button class="chip" data-act="alt" data-base="${esc(raw.ex)}" data-ex="${esc(o.ex)}" aria-pressed="${o.ex===it.ex}">${esc(EX[o.ex].sh||EX[o.ex].fr)}${o.ex===raw.ex?'<small>prévu</small>':''}</button>`).join('')+`</div></div>`:'';
   const last=si===sess.stations.length-1;
   const editBar=date!==Store.today()?`<div class="note editing">Modification de la séance du <b>${fmtDay(date)}</b></div>`:'';
   return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">${stLabel(sess,si).txt}</span></div>${editBar}
    <div class="prog">${prog}</div>${tabs}
-   <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>
+   <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>${chips}
    <div class="video">${video}</div>
    <div class="vlinks">${vok?`<a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a>`:'<span></span>'}<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Autres démos ↗</a></div>
    <div class="target"><span class="mute">Objectif</span><b>${kind==='tick'&&it.sets===1?esc(it.reps):it.sets+' × '+esc(it.reps)}</b></div>
@@ -105,7 +109,7 @@ function viewStation(sess,si){
 }
 
 function onTick(k){
-  const sess=sessOf(S.sess),st=sess.stations[S.st],it=st[S.exi],ex=EX[it.ex],date=curDate();
+  const sess=sessOf(S.sess),st=sess.stations[S.st],date=curDate(),it=E(sess,st[S.exi],date),ex=EX[it.ex];
   const cur=Store.get(date,sess.id,it.ex)[k]||{};
   if(cur.done){Store.setSet(date,sess.id,it.ex,k,{done:false});render();return}
   const v={done:true,t:Date.now()};
@@ -113,8 +117,8 @@ function onTick(k){
   Store.setSet(date,sess.id,it.ex,k,v);
   beepPrime();
   if(it.rest&&date===Store.today())startTimer(it.rest,ex.en);
-  const other=st.findIndex((x,j)=>j!==S.exi&&setsDone(sess,x,date)<x.sets);
-  if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,it,date)){S.exi=other;S.vid=false;scrollTo(0,0)}
+  const other=st.findIndex((x,j)=>j!==S.exi&&setsDone(sess,x,date)<E(sess,x,date).sets);
+  if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,st[S.exi],date)){S.exi=other;S.vid=false;scrollTo(0,0)}
   render();
 }
 function goStation(i){S.st=i;S.exi=0;S.vid=false;scrollTo(0,0);wake();render()}
@@ -161,6 +165,7 @@ function onAct(e){
   else if(a==='list'){S.st=null;render()}
   else if(a==='ex'){S.exi=+b.dataset.k;S.vid=false;render()}
   else if(a==='vid'){S.vid=true;render()}
+  else if(a==='alt'){Store.pickSet(curDate(),sess.id,b.dataset.base,b.dataset.ex);S.vid=false;render()}
   else if(a==='tick')onTick(+b.dataset.k);
   else if(a==='prev'&&S.st>0)goStation(S.st-1);
   else if(a==='next'){if(S.st<sess.stations.length-1)goStation(S.st+1);else{S.st=null;scrollTo(0,0);render();toast('Séance terminée. Bien joué.')}}

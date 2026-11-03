@@ -85,5 +85,23 @@
  },
  "sideplank": {
   "kind": "tick"
+ },
+ "bandfacepull": {
+  "kind": "reps"
+ },
+ "rearraise": {
+  "kind": "lift"
+ },
+ "backext": {
+  "kind": "lift"
+ },
+ "bridge": {
+  "kind": "lift"
+ },
+ "bandpallof": {
+  "kind": "reps"
+ },
+ "birddog": {
+  "kind": "reps"
  }
 }

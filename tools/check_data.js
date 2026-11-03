@@ -9,7 +9,8 @@ const {EX,SESSIONS,ALIASES}=ctx.window,errs=[];
 const file=path.join(__dirname,'released-ids.json');
 const released=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{};
 const resolve=id=>{let n=0;while(ALIASES[id]&&n++<6)id=ALIASES[id];return id};
-for(const s of SESSIONS)for(const st of s.stations)for(const it of st)if(!EX[it.ex])errs.push(`session ${s.id}: unknown exercise id "${it.ex}"`);
+for(const s of SESSIONS)for(const st of s.stations)for(const it of st){if(!EX[it.ex])errs.push(`session ${s.id}: unknown exercise id "${it.ex}"`);
+  const seen=new Set([it.ex]);for(const a of it.alt||[]){if(!EX[a.ex])errs.push(`session ${s.id}: unknown alternative id "${a.ex}" for "${it.ex}"`);if(seen.has(a.ex))errs.push(`session ${s.id}: duplicate alternative "${a.ex}" for "${it.ex}"`);seen.add(a.ex)}}
 for(const [a,b] of Object.entries(ALIASES)){
   if(EX[a])errs.push(`alias "${a}" still exists in EX: remove one of them`);
   if(!EX[resolve(a)])errs.push(`alias "${a}" -> "${b}" does not end on an existing exercise`);
