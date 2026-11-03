@@ -76,5 +76,14 @@
  },
  "elliptical": {
   "kind": "tick"
+ },
+ "revpecdeck": {
+  "kind": "lift"
+ },
+ "dbrdl": {
+  "kind": "lift"
+ },
+ "sideplank": {
+  "kind": "tick"
  }
 }
