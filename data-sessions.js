@@ -10,6 +10,7 @@ const WU=()=>[
 /* Variantes : alt = autres exercices possibles pour la même station (choisis dans l’app selon ce qui est libre).
    Chaque entrée peut remplacer sets, reps, rest ou note ; sinon elle reprend ceux de l’exercice prévu. */
 const ALT_REAR=[{ex:'bandfacepull'},{ex:'facepull'}];
+const ALT_CORE=[{ex:'bandpallof',reps:'10 par côté'},{ex:'birddog',reps:'8 par côté'},{ex:'pallof',reps:'10 par côté'}];
 window.SESSIONS=[
 {id:'a',tab:'Séance A',title:'Séance A',sub:'Pectoraux et bas du corps, environ 60 min',dur:'≈ 60 min',focus:'Pectoraux, bas du corps',
  intro:'Les exercices sur machine se font en séries successives. Seules les stations à deux exercices s’enchaînent : une machine ou une poulie avec un exercice à l’élastique, au tapis ou aux haltères. Une série du premier, repos, une série du second, et ainsi de suite. Si une machine est prise, change l’ordre des exercices.',
@@ -31,7 +32,7 @@ window.SESSIONS=[
   [I('revpecdeck',4,'12–15',60,{alt:ALT_REAR})],
   [I('pecfly',3,'12–15',60)],
   [I('dbrdl',3,'10–12',75)],
-  [I('sideplank',3,'25 s/côté',60)],
+  [I('sideplank',3,'25 s/côté',60,{alt:ALT_CORE})],
   [I('shoulderpress',3,'8–10',90)],
   [I('curl',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
   [I('triext',2,'12',60,{note:'Optionnel : après les 60 min, seulement s’il reste du temps.'})],
