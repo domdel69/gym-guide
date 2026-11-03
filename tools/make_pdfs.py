@@ -40,7 +40,7 @@ def setbox(n,total,kind):
     return '<div><div class="set"><i></i><u class="a">reps</u><u class="b">kg</u></div></div>'
 def altline(it):
     if not it.get('alt'):return ''
-    names=' · '.join(EX[a['ex']].get('sh') or EX[a['ex']]['fr'] for a in it['alt'])
+    names=' · '.join(EX[a['ex']]['en'] for a in it['alt'])
     return f"<div class='alt'>Ou : {e(names)}</div>"
 def rows(sess):
     out=[];maxn=max(it['sets'] for st in sess['stations'] if not st[0].get('warm') for it in st)
