@@ -8,6 +8,7 @@ Personal gym programme web app (PWA, French UI). Hosted on GitHub Pages, logs st
 - `version.js`: `APP_VERSION` and `RELEASES` (archived versions). `VERSION` in `sw.js`: bump both on each release (0.1, 0.2, ...).
 - `tools/make_pdfs.py`: regenerates `print/*.pdf` from the data files (needs node, playwright).
 - `tools/check_data.js`, `tools/released-ids.json`: log consistency check (see below).
+- Programme tracking: start date in `settings.start`, measurements in `checks` (phone only, added to the log format); week counter, deload banner and 6-week reminder are computed in `app.js` (`PHASE`, `weekOf`, `nextCheck`).
 - `tools/archive.py`, `releases/`: static copies of past versions.
 
 ## Release steps
@@ -38,6 +39,7 @@ Suivi excludes warm-up stations (items with `warm:true` in the sessions, placed 
 ## Releases
 | Version | Commit | Archive |
 | --- | --- | --- |
+| 0.18 | 14d8368 | `releases/0.18/` |
 | 0.17 | b701982 | `releases/0.17/` |
 | 0.16 | b953dad | `releases/0.16/` |
 | 0.15 | 005d098 | `releases/0.15/` |
