@@ -112,6 +112,29 @@ function viewExercise(id){
    <div class="card"><h3>Historique</h3><ul class="plain">${rows}</ul></div>`;
 }
 
+/* Tuiles de synthèse en tête du Suivi : semaine en cours, régularité, volume, records. */
+function statTiles(){
+  const ss=Store.sessions();if(!ss.length)return '';
+  const td=Store.today(),mo=mondayOf(td),pmo=addDays(mo,-7);
+  const inWk=(dt,a)=>dt>=a&&dt<addDays(a,7);
+  const wkG=ss.filter(x=>GYM.includes(x.sid)&&inWk(x.date,mo)).length,wkH=ss.filter(x=>x.sid==='home'&&inWk(x.date,mo)).length;
+  const oldest=ss[ss.length-1].date,weeks=Math.max(1,Math.min(4,Math.floor((D0(mo)-D0(mondayOf(oldest)))/7)+1)),from=addDays(mo,-7*(weeks-1));
+  const adh=ss.filter(x=>GYM.includes(x.sid)&&x.date>=from&&x.date<=td).length;
+  let vThis=0,vPrev=0;
+  for(const x of ss){const a=inWk(x.date,mo),b=inWk(x.date,pmo);if(!a&&!b)continue;
+    for(const e of x.exs){const k=Store.info(e.ex).kind;if(k!=='lift'&&k!=='assist')continue;const v=volOf(e.sets,k);if(v==null)continue;if(a)vThis+=v;else vPrev+=v}}
+  const cut=addDays(td,-13),recs=[];
+  for(const id of Store.trackedIds().live){const asc=Store.history(id).slice().reverse();
+    if(metricsOf(id,asc).some(m=>{const pr=prIdx(m.pts,m.better);return m.pts.some((q,i)=>pr.has(i)&&q.date>=cut)}))recs.push(Store.info(id).en)}
+  const vSub=vPrev>0?`${vThis>=vPrev?'+':'−'}${Math.abs(Math.round((vThis-vPrev)/vPrev*100))} % vs semaine passée`:(vThis>0?'Pas de semaine passée à comparer':'Aucune série avec charge');
+  const T=(k,v,sub,act)=>`<${act?'button data-act="pmode" data-m="exercises"':'div'} class="stat${act?' btn-like':''}"><span class="stat-k">${k}</span><b>${v}</b><span class="stat-s">${sub}</span></${act?'button':'div'}>`;
+  return `<div class="stats">`+
+   T('Cette semaine',`${wkG} / 2`,`séances salle${wkH?' · '+wkH+' maison':''}`)+
+   T(weeks>1?`${weeks} dernières semaines`:'Régularité',`${adh} / ${2*weeks}`,'séances salle faites')+
+   T('Volume cette semaine',vThis>0?nfk(vThis)+' kg':'–',esc(vSub))+
+   T('Records (14 jours)',String(recs.length),recs.length?esc(recs.slice(0,3).join(', ')+(recs.length>3?' …':'')):'Aucun pour l’instant',true)+`</div>`;
+}
+
 function viewProgress(){
   const P=S.prog;
   if(P.ex)return viewExercise(P.ex);
@@ -122,18 +145,18 @@ function viewProgress(){
     const list=ss.map(x=>{const key='ps-'+x.date+'-'+x.sid,n=x.exs.reduce((m,e)=>m+e.sets.length,0);
       const lines=x.exs.map(e=>{const inf=Store.info(e.ex);return `<li><button class="lnk" data-act="exdetail" data-ex="${esc(e.ex)}">${esc(inf.en)} ›</button><div>${e.sets.map(s=>esc(setTxt(s,inf.kind))).join(' · ')}${inf.kind==='assist'?' <span class="mute small">(assistance)</span>':''}</div></li>`}).join('');
       return window.swipe(x.date,x.sid,`<details class="card fold" data-k="${esc(key)}"${S.open[key]?' open':''}><summary><span class="sm"><b>${fmtDay(x.date)}</b><span class="mute">${esc(x.title)}</span></span><span class="sr small">${x.exs.length} exercice${x.exs.length>1?'s':''} · ${n} série${n>1?'s':''}</span></summary><ul class="plain">${lines}</ul></details>`)}).join('');
-    return `<h1>Suivi</h1>${seg}<p class="mute small">${ss.length} séance${ss.length>1?'s':''} enregistrée${ss.length>1?'s':''}. Touche une séance pour voir le détail, un exercice pour voir sa courbe. Glisse une séance vers la droite pour la supprimer.</p>${list}`;
+    return `<h1>Suivi</h1>${statTiles()}${seg}<p class="mute small">${ss.length} séance${ss.length>1?'s':''} enregistrée${ss.length>1?'s':''}. Touche une séance pour voir le détail, un exercice pour voir sa courbe. Glisse une séance vers la droite pour la supprimer.</p>${list}`;
   }
   const {live,old}=Store.trackedIds();
   const card=id=>{const inf=Store.info(id),h=Store.history(id),l=h[0],kind=inf.kind;
     const ser=h.slice().reverse().slice(-12).map(x=>noKg(kind)?repsOf(x.sets):kgOf(x.sets,kind)).filter(v=>v!=null);
     return `<button class="home-card ex" data-act="exdetail" data-ex="${esc(id)}"><span class="hc-t"><b>${esc(inf.en)}${hasNewPR(id,h)?' <span class="pr-tag">Record</span>':''}</b><span>${esc(inf.fr)}</span><span class="small">${fmtDate(l.date)} : ${l.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
-  return `<h1>Suivi</h1>${seg}<p class="mute small">Touche un exercice pour voir l’évolution des reps et de la charge.</p>
+  return `<h1>Suivi</h1>${statTiles()}${seg}<p class="mute small">Touche un exercice pour voir l’évolution des reps et de la charge.</p>
    <div class="list">${live.map(card).join('')}</div>${old.length?`<h2>Anciens exercices</h2><div class="list">${old.map(card).join('')}</div>`:''}`;
 }
 
 /* ---------- Réglages ---------- */
-function fold(key,title,body){return `<details class="card fold" data-k="${key}"${S.open[key]?' open':''}><summary><h3>${title}</h3></summary><div class="fold-b">${body}</div></details>`}
+function fold(key,title,body,sub){return `<details class="card fold" data-k="${key}"${S.open[key]?' open':''}><summary><h3>${title}</h3>${sub?`<span class="sr small">${sub}</span>`:''}</summary><div class="fold-b">${body}</div></details>`}
 function viewSettings(){
   const s=Store.d.settings,ud=Store.undoInfo();
   const vids=Object.keys(EX).map(id=>{const v=Store.videoId(id),custom=!!s.videos[id];
@@ -141,21 +164,19 @@ function viewSettings(){
       <input type="text" id="v-${id}" data-vid="${id}" value="${v?'https://youtu.be/'+esc(v):''}" placeholder="Lien YouTube" inputmode="url" autocapitalize="off" autocomplete="off" aria-label="Vidéo ${esc(EX[id].en)}"></div>`}).join('');
   const prev=(window.RELEASES||[]).filter(v=>v!==window.APP_VERSION);
   const inArchive=location.pathname.includes('/releases/');
+  if(S.open.session===undefined)S.open.session=true;
+  const wx=weekOf(Store.today()),progSub=!s.start?'date à définir':wx&&wx.w?'semaine '+wx.w+' / 12':wx&&wx.before?'départ dans '+wx.before+' j':'terminé',sessSub=(s.sound?'son activé':'son coupé')+(s.awake?' · écran allumé':'');
   return `<h1>Réglages</h1>
-   <div class="card"><h3>Séance</h3>
-    <label class="switch"><span>Garder l’écran allumé en station</span><input type="checkbox" data-opt="awake" ${s.awake?'checked':''}></label>
+   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button>
+    ${prev.length&&!inArchive?`<details class="sub" data-k="versions"${S.open.versions?' open':''}><summary>Versions précédentes</summary><p class="mute small">Si la dernière version pose problème, ouvre une version précédente. Le journal est partagé : tes séries restent visibles.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.map(v=>`<a class="btn sm" href="releases/${esc(v)}/">Version ${esc(v)}</a>`).join('')}</div></details>`:''}</div>
+   ${fold('program','Programme',progBody(),progSub)}
+   ${fold('session','Séance',`<label class="switch"><span>Garder l’écran allumé en station</span><input type="checkbox" data-opt="awake" ${s.awake?'checked':''}></label>
     <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label>
-    <div class="cfg"><div class="l"><span>Poids de corps (kg)</span></div>
-     <input type="number" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${s.bodyKg||''}" placeholder="ex. 80" aria-label="Poids de corps">
-     <p class="mute small">Sert uniquement au volume des tractions assistées. Reste sur ce téléphone.</p></div>
     <div class="cfg"><div class="l"><span>Mode du son</span></div>
      <select data-snd aria-label="Mode du son">
       <option value="priority"${s.soundMode!=='mix'?' selected':''}>Prioritaire</option><option value="mix"${s.soundMode==='mix'?' selected':''}>Mélangé à la musique</option></select>
      <p class="mute small">Prioritaire : audible avec la musique et en mode silencieux, mais peut mettre la musique en pause un instant. Mélangé : ne coupe pas la musique, mais muet si le mode silencieux de l’iPhone est activé.</p>
-     <button class="btn sm" data-act="sndtest">Tester le son</button><p class="mute small" id="sndstat">${esc(sndStatus())}</p></div></div>
-   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button>
-    ${prev.length&&!inArchive?`<details class="sub" data-k="versions"${S.open.versions?' open':''}><summary>Versions précédentes</summary><p class="mute small">Si la dernière version pose problème, ouvre une version précédente. Le journal est partagé : tes séries restent visibles.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.map(v=>`<a class="btn sm" href="releases/${esc(v)}/">Version ${esc(v)}</a>`).join('')}</div></details>`:''}</div>
-   ${fold('program','Programme',progBody())}
+     <button class="btn sm" data-act="sndtest">Tester le son</button><p class="mute small" id="sndstat">${esc(sndStatus())}</p></div>`,sessSub)}
    ${fold('backup','Sauvegarde',`<p class="mute small">Tes séries sont enregistrées sur ce téléphone seulement. Exporte un fichier de temps en temps.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div>
     <p class="mute small" style="margin-top:14px">Effacer supprime toutes les séries enregistrées sur ce téléphone. Les liens vidéo, les notes et les options sont conservés. Exporte d’abord si tu veux garder une copie.</p>
@@ -174,6 +195,9 @@ function progBody(){
    <input type="date" class="datein" data-start value="${st?esc(st):''}" aria-label="Date de la première séance">
    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" data-act="startnow">Aujourd’hui</button><button class="btn" data-act="startclear">Effacer la date</button></div>
    <p class="small" style="margin-top:8px">${state}${st?` Semaine 1 : ${fmtDate(st)}. Fin du programme : ${fmtDate(addDays(st,83))}.`:''}</p>
+   <h3 style="margin-top:16px">Poids de corps</h3>
+   <input type="number" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${Store.d.settings.bodyKg||''}" placeholder="ex. 80" aria-label="Poids de corps en kg">
+   <p class="mute small">En kg. Sert uniquement au volume des tractions assistées. Reste sur ce téléphone.</p>
    <h3 style="margin-top:16px">Mesures et photos</h3>
    <p class="mute small">Tour de taille et photos (face, profil, dos) toutes les 6 semaines.${n?` Prochaines : ${fmtDate(n.due)}.`:''} Les chiffres restent sur ce téléphone.</p>
    <div class="inline"><input id="waist" inputmode="decimal" placeholder="Tour de taille (cm), optionnel" aria-label="Tour de taille en centimètres"><button class="btn" data-act="checkdone">Mesure faite aujourd’hui</button></div>${hist}`;

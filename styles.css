@@ -239,3 +239,12 @@ details.sub[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 .navbtns .btn.ready{box-shadow:0 0 0 3px var(--ok)}
 .timer .lbl b{font-weight:700}
 .timer .lbl b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.9rem}
+/* 0.23 Suivi : tuiles de synthèse; tuiles glissables sans sélection de texte */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 14px}
+.stat{display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;min-width:0}
+.stat-k{font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
+.stat b{font-size:1.55rem;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat-s{font-size:.82rem;color:var(--mute);overflow-wrap:anywhere}
+button.stat{cursor:pointer}button.stat:active{border-color:var(--accent)}
+.sw-front,.sw-front *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
