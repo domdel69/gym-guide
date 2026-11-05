@@ -29,29 +29,71 @@ const volOf=(sets,kind)=>{const bw=+Store.d.settings.bodyKg||0;let t=0,n=0;
     else{if(s.kg==null||s.kg===''||!(+s.kg>=0))continue;t+=r*(+s.kg);n++}}
   return n?Math.round(t):null};
 
-/* Courbe SVG : dates proportionnelles au temps, valeurs annotées. */
-function chart(pts,{title,unit,note}){
-  const W=320,H=170,L=38,R=14,T=20,B=28;
+/* Séparateur de milliers (') pour les courbes : 12'500. */
+const nfk=v=>{const [i,f]=nf(v).split(',');return i.replace(/\B(?=(\d{3})+(?!\d))/g,"'")+(f?','+f:'')};
+
+/* 1RM estimé (formule d’Epley : charge × (1 + reps / 30)), meilleure série de la séance, séries de 1 à 12 reps seulement. */
+const e1rmOf=sets=>{let b=null;for(const s of sets){const r=+s.reps,k=+s.kg;if(s.reps==null||s.kg==null||s.kg===''||!(r>=1&&r<=12)||!(k>0))continue;
+  const e=r===1?k:k*(1+r/30);if(b===null||e>b)b=e}return b===null?null:Math.round(b*2)/2};
+
+/* Records : points qui battent strictement toutes les séances précédentes (la première séance n’est pas un record). */
+const prIdx=(pts,better)=>{const r=new Set();let b=null;
+  pts.forEach((p,i)=>{const beat=b===null||(better==='min'?p.v<b:p.v>b);if(b!==null&&beat)r.add(i);if(beat)b=p.v});return r};
+
+/* Courbes d’un exercice (ordre d’affichage) ; asc = historique du plus ancien au plus récent. */
+function metricsOf(id,asc){
+  const kind=Store.info(id).kind,out=[];
+  const P=f=>asc.map(x=>({date:x.date,v:f(x.sets)})).filter(p=>p.v!=null);
+  const vol=P(s=>volOf(s,kind));
+  if(vol.length)out.push({key:'vol',pts:vol,better:'max',title:kind==='time'?'Durée totale (s)':noKg(kind)?'Reps totales':'Volume total (kg)',unit:kind==='time'?' s':noKg(kind)?' reps':' kg',
+    note:kind==='time'?'Somme des durées de toutes les séries.':noKg(kind)?'Somme des reps de toutes les séries.':kind==='assist'?'Reps × (poids de corps − assistance), toutes séries. Le poids de corps se règle dans Réglages.':'Somme de reps × charge sur toutes les séries : combine les deux courbes en une seule.'});
+  if(kind==='lift'){const e=P(e1rmOf);if(e.length)out.push({key:'e1rm',pts:e,better:'max',title:'1RM estimé (kg)',unit:' kg',note:'Charge maximale pour 1 répétition, estimée : charge × (1 + reps / 30), meilleure série de chaque séance (séries de 12 reps ou moins). Indicatif.'}) }
+  if(!noKg(kind)){const k=P(s=>kgOf(s,kind));if(k.length)out.push({key:'kg',pts:k,better:kind==='assist'?'min':'max',title:kind==='assist'?'Assistance (kg)':'Charge (kg)',unit:' kg',note:kind==='assist'?'Plus bas = mieux. Valeur la plus basse de chaque séance.':'Charge la plus haute de chaque séance.'})}
+  const r=P(repsOf);if(r.length)out.push({key:'reps',pts:r,better:'max',title:kind==='time'?'Durée (s)':'Répétitions',unit:kind==='time'?' s':' reps',note:kind==='time'?'Durée la plus longue de chaque séance.':'Meilleure série de chaque séance.'});
+  return out;
+}
+/* Vrai si la dernière séance de l’exercice a battu un record (au moins une courbe). */
+const hasNewPR=(id,h)=>{const asc=h.slice().reverse(),last=asc[asc.length-1];if(!last)return false;
+  return metricsOf(id,asc).some(m=>{const n=m.pts.length;return n>1&&m.pts[n-1].date===last.date&&prIdx(m.pts,m.better).has(n-1)})};
+
+/* Courbe SVG : dates proportionnelles au temps, valeurs annotées, records entourés, semaines du programme et semaines allégées. */
+function chart(pts,{title,unit,note,better}){
+  const W=320,H=178,R=14,T=20,B=36;
   if(!pts.length)return '';
-  const head=`<div class="chart-h"><h3>${esc(title)}</h3>${note?`<span class="mute small">${esc(note)}</span>`:''}</div>`;
   const vals=pts.map(p=>p.v);let mn=Math.min(...vals),mx=Math.max(...vals);
   if(mn===mx){mn-=1;mx+=1}else{const pad=(mx-mn)*.12;mn-=pad;mx+=pad}
   const raw=(mx-mn)/3,pw=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/pw,step=(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*pw;
   mn=Math.floor(mn/step+1e-9)*step;mx=Math.ceil(mx/step-1e-9)*step;
   const ticks=[];for(let v=mn;v<=mx+1e-9;v+=step)ticks.push(v);
+  const L=Math.max(38,Math.ceil(Math.max(...ticks.map(v=>nfk(v).length))*5.3)+12);
   const t=pts.map(p=>Date.parse(p.date)),t0=t[0],t1=t[t.length-1];
-  const X=i=>t1>t0?L+(t[i]-t0)/(t1-t0)*(W-L-R):L+(W-L-R)/2;
+  const XT=tm=>L+(tm-t0)/(t1-t0)*(W-L-R);
+  const X=i=>t1>t0?XT(t[i]):L+(W-L-R)/2;
   const Y=v=>T+(1-(v-mn)/(mx-mn))*(H-T-B);
-  const grid=ticks.map(v=>`<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${L-5}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${nf(v)}</text>`).join('');
+  const pr=pts.length>1?prIdx(pts,better):new Set();
+  /* Semaines du programme (si la date de départ est réglée) */
+  let bands='',wk='',hasWk=false,hasDl=false;
+  const st=Store.d.settings.start;
+  if(st&&t1>t0){const s0=Date.parse(st),DAY=864e5,ws=n=>s0+(n-1)*7*DAY;
+    for(const n of [6,12]){const a=Math.max(ws(n),t0),b=Math.min(ws(n)+7*DAY,t1);
+      if(b>t0&&ws(n)<t1&&b>=a){const x0=XT(a),w=Math.max(2,XT(b)-x0),cx=Math.min(W-R-14,Math.max(L+14,x0+w/2));hasDl=true;
+        bands+=`<rect class="dl" x="${x0.toFixed(1)}" y="${T-4}" width="${w.toFixed(1)}" height="${(H-B-T+4).toFixed(1)}"/><text class="dlt" x="${cx.toFixed(1)}" y="${T-8}" text-anchor="middle">allégée</text>`}}
+    const ws_=[];for(let n=1;n<=12;n++)if(ws(n)>=t0&&ws(n)<=t1)ws_.push(n);
+    const every=ws_.length>10?2:1;
+    ws_.forEach((n,i)=>{hasWk=true;const x=XT(ws(n));wk+=`<line class="wk" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${H-B}" y2="${H-B+4}"/>`+(i%every===0?`<text class="wkt" x="${x.toFixed(1)}" y="${H-B+12}" text-anchor="middle">S${n}</text>`:'')})}
+  const grid=ticks.map(v=>`<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${L-5}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${nfk(v)}</text>`).join('');
   const line=pts.length>1?`<polyline class="line" points="${pts.map((p,i)=>X(i).toFixed(1)+','+Y(p.v).toFixed(1)).join(' ')}"/>`:'';
   const maxI=vals.indexOf(Math.max(...vals));
   const show=i=>pts.length<=8||i===0||i===pts.length-1||i===maxI;
-  const dots=pts.map((p,i)=>`<circle class="${i===pts.length-1?'cur':''}" cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3.6"/>`+
-    (show(i)?`<text class="val" x="${Math.min(W-R-6,Math.max(L+6,X(i))).toFixed(1)}" y="${(Y(p.v)-8).toFixed(1)}" text-anchor="middle">${nf(p.v)}</text>`:'')).join('');
+  const dots=pts.map((p,i)=>(pr.has(i)?`<circle class="pr" cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="7"/>`:'')+`<circle class="${i===pts.length-1?'cur':''}" cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3.6"/>`+
+    (show(i)?`<text class="val" x="${Math.min(W-R-6,Math.max(L+6,X(i))).toFixed(1)}" y="${(Y(p.v)-(pr.has(i)?12:8)).toFixed(1)}" text-anchor="middle">${nfk(p.v)}</text>`:'')).join('');
   const dd=d=>d.slice(8)+'.'+d.slice(5,7);
-  const xl=`<text x="${X(0).toFixed(1)}" y="${H-8}" text-anchor="${pts.length>1?'start':'middle'}">${dd(pts[0].date)}</text>`+(pts.length>1?`<text x="${X(pts.length-1).toFixed(1)}" y="${H-8}" text-anchor="end">${dd(pts[pts.length-1].date)}</text>`:'');
-  const label=`${title} : `+pts.map(p=>fmtDate(p.date)+' '+nf(p.v)+(unit||'')).join(', ');
-  return `<div class="card chart">${head}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${grid}${line}${dots}${xl}</svg>${pts.length<2?'<p class="mute small">Une seule séance pour l’instant : la courbe se dessine dès la deuxième.</p>':''}</div>`;
+  const xl=`<text x="${X(0).toFixed(1)}" y="${H-5}" text-anchor="${pts.length>1?'start':'middle'}">${dd(pts[0].date)}</text>`+(pts.length>1?`<text x="${X(pts.length-1).toFixed(1)}" y="${H-5}" text-anchor="end">${dd(pts[pts.length-1].date)}</text>`:'');
+  const label=`${title} : `+pts.map(p=>fmtDate(p.date)+' '+nfk(p.v)+(unit||'')).join(', ');
+  const newPR=pts.length>1&&pr.has(pts.length-1);
+  const head=`<div class="chart-h"><h3>${esc(title)}${newPR?' <span class="pr-tag">Record</span>':''}</h3>${note?`<span class="mute small">${esc(note)}</span>`:''}</div>`;
+  const leg=[pr.size?'cercle : record':'',hasDl?'bande : semaine allégée':'',hasWk?'S1, S2… : semaines du programme':''].filter(Boolean).join(' · ');
+  return `<div class="card chart">${head}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${bands}${grid}${line}${wk}${dots}${xl}</svg>${leg?`<p class="mute small chart-leg">${leg}</p>`:''}${pts.length<2?'<p class="mute small">Une seule séance pour l’instant : la courbe se dessine dès la deuxième.</p>':''}</div>`;
 }
 
 function viewExercise(id){
@@ -59,18 +101,14 @@ function viewExercise(id){
   const back=`<div class="top"><button class="btn sm" data-act="pback">‹ Suivi</button></div>`;
   if(!h.length)return back+`<h1>${esc(inf.en)}</h1><div class="card"><p>Aucune série enregistrée.</p></div>`;
   const asc=h.slice().reverse(),kind=inf.kind;
-  const kgPts=noKg(kind)?[]:asc.map(x=>({date:x.date,v:kgOf(x.sets,kind)})).filter(p=>p.v!=null);
-  const repPts=asc.map(x=>({date:x.date,v:repsOf(x.sets)})).filter(p=>p.v!=null);
-  const volPts=asc.map(x=>({date:x.date,v:volOf(x.sets,kind)})).filter(p=>p.v!=null);
-  const volTitle=kind==='time'?'Durée totale (s)':noKg(kind)?'Reps totales':'Volume total (kg)',volUnit=kind==='time'?' s':noKg(kind)?' reps':' kg';
-  const volNote=kind==='time'?'Somme des durées de toutes les séries.':noKg(kind)?'Somme des reps de toutes les séries.':kind==='assist'?'Reps × (poids de corps − assistance), toutes séries. Le poids de corps se règle dans Réglages.':'Somme de reps × charge sur toutes les séries : combine les deux courbes en une seule.';
-  const best=kgPts.length?(kind==='assist'?Math.min(...kgPts.map(p=>p.v)):Math.max(...kgPts.map(p=>p.v))):null;
+  const ms=metricsOf(id,asc),kgM=ms.find(m=>m.key==='kg');
+  const best=kgM?(kind==='assist'?Math.min(...kgM.pts.map(p=>p.v)):Math.max(...kgM.pts.map(p=>p.v))):null;
+  const e1=ms.find(m=>m.key==='e1rm'),e1best=e1?Math.max(...e1.pts.map(p=>p.v)):null;
   const rows=h.map(x=>`<li><b>${fmtDay(x.date)}</b> <span class="mute small">${x.sids.map(sid=>esc(Store.sessTitle(x.date,sid).split(' : ')[0])).join(', ')}</span><div>${x.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}${kind==='assist'?' <span class="mute small">(assistance)</span>':''}</div></li>`).join('');
-  return back+`<h1>${esc(inf.en)}</h1><div class="mute">${esc(inf.fr)}${inf.live?'':' · ancien exercice'}</div>
-   <p class="small mute" style="margin-top:8px">${h.length} séance${h.length>1?'s':''}${best!=null?` · ${kind==='assist'?'assistance la plus basse':'meilleure charge'} : <b style="color:var(--ink)">${nf(best)} kg</b>`:''}</p>
-   ${volPts.length?chart(volPts,{title:volTitle,unit:volUnit,note:volNote}):(kind==='assist'?'<div class="card"><p class="mute small">Volume total : renseigne ton poids de corps dans Réglages pour calculer reps × (poids − assistance).</p></div>':'')}
-   ${kgPts.length?chart(kgPts,{title:kind==='assist'?'Assistance (kg)':'Charge (kg)',unit:' kg',note:kind==='assist'?'Plus bas = mieux. Valeur la plus basse de chaque séance.':'Charge la plus haute de chaque séance.'}):''}
-   ${chart(repPts,{title:kind==='time'?'Durée (s)':'Répétitions',unit:kind==='time'?' s':' reps',note:kind==='time'?'Durée la plus longue de chaque séance.':'Meilleure série de chaque séance.'})}
+  return back+`<h1>${esc(inf.en)}${hasNewPR(id,h)?' <span class="pr-tag">Record</span>':''}</h1><div class="mute">${esc(inf.fr)}${inf.live?'':' · ancien exercice'}</div>
+   <p class="small mute" style="margin-top:8px">${h.length} séance${h.length>1?'s':''}${best!=null?` · ${kind==='assist'?'assistance la plus basse':'meilleure charge'} : <b style="color:var(--ink)">${nf(best)} kg</b>`:''}${e1best!=null?` · 1RM estimé : <b style="color:var(--ink)">${nfk(e1best)} kg</b>`:''}</p>
+   ${ms.some(m=>m.key==='vol')?'':(kind==='assist'?'<div class="card"><p class="mute small">Volume total : renseigne ton poids de corps dans Réglages pour calculer reps × (poids − assistance).</p></div>':'')}
+   ${ms.map(m=>chart(m.pts,m)).join('')}
    <div class="card"><h3>Historique</h3><ul class="plain">${rows}</ul></div>`;
 }
 
@@ -89,7 +127,7 @@ function viewProgress(){
   const {live,old}=Store.trackedIds();
   const card=id=>{const inf=Store.info(id),h=Store.history(id),l=h[0],kind=inf.kind;
     const ser=h.slice().reverse().slice(-12).map(x=>noKg(kind)?repsOf(x.sets):kgOf(x.sets,kind)).filter(v=>v!=null);
-    return `<button class="home-card ex" data-act="exdetail" data-ex="${esc(id)}"><span class="hc-t"><b>${esc(inf.en)}</b><span>${esc(inf.fr)}</span><span class="small">${fmtDate(l.date)} : ${l.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
+    return `<button class="home-card ex" data-act="exdetail" data-ex="${esc(id)}"><span class="hc-t"><b>${esc(inf.en)}${hasNewPR(id,h)?' <span class="pr-tag">Record</span>':''}</b><span>${esc(inf.fr)}</span><span class="small">${fmtDate(l.date)} : ${l.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
   return `<h1>Suivi</h1>${seg}<p class="mute small">Touche un exercice pour voir l’évolution des reps et de la charge.</p>
    <div class="list">${live.map(card).join('')}</div>${old.length?`<h2>Anciens exercices</h2><div class="list">${old.map(card).join('')}</div>`:''}`;
 }

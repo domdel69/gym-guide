@@ -264,14 +264,15 @@ document.addEventListener('toggle',e=>{const k=e.target&&e.target.dataset&&e.tar
 
 /* Glisser une tuile vers la droite : découvre « Supprimer ». Un toucher sur une tuile ouverte la referme. */
 (()=>{let g=null,moved=false;const W=96;
-  const close=()=>document.querySelectorAll('.sw-front.open').forEach(f=>{f.classList.remove('open');f.style.transform=''});
+  const rel=f=>setTimeout(()=>{if(!f.classList.contains('open')&&!f.style.transform)f.parentNode.classList.remove('act')},260);
+  const close=()=>document.querySelectorAll('.sw-front.open').forEach(f=>{f.classList.remove('open');f.style.transform='';rel(f)});
   document.addEventListener('pointerdown',e=>{moved=false;const f=e.target.closest('.sw-front');if(!f||e.target.closest('.sw-del'))return;
     if(!f.classList.contains('open'))close();g={f,x:e.clientX,y:e.clientY,open:f.classList.contains('open'),dx:0,lock:null};moved=false});
   document.addEventListener('pointermove',e=>{if(!g)return;const dx=e.clientX-g.x,dy=e.clientY-g.y;
     if(g.lock===null){if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.5)g.lock='x';else if(Math.abs(dy)>8){g=null;return}else return}
-    moved=true;const base=g.open?W:0;g.dx=Math.max(0,Math.min(W+24,base+dx));g.f.style.transition='none';g.f.style.transform='translateX('+g.dx+'px)'});
+    moved=true;g.f.parentNode.classList.add('act');const base=g.open?W:0;g.dx=Math.max(0,Math.min(W+24,base+dx));g.f.style.transition='none';g.f.style.transform='translateX('+g.dx+'px)'});
   const end=()=>{if(!g)return;const f=g.f;f.style.transition='';
-    if(g.lock==='x'){setTimeout(()=>{moved=false},400);const o=g.dx>56;f.classList.toggle('open',o);f.style.transform=o?'translateX('+W+'px)':''}g=null};
+    if(g.lock==='x'){setTimeout(()=>{moved=false},400);const o=g.dx>56;f.classList.toggle('open',o);f.style.transform=o?'translateX('+W+'px)':'';if(!o)rel(f)}g=null};
   document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);
   document.addEventListener('click',e=>{if(moved){moved=false;e.preventDefault();e.stopPropagation();return}
     const f=e.target.closest('.sw-front.open');if(f&&!e.target.closest('.sw-del')){e.preventDefault();e.stopPropagation();close()}},true);
