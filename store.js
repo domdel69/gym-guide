@@ -35,6 +35,8 @@ const Store=(()=>{
         if(d.settings.videos[old]){if(!d.settings.videos[to])d.settings.videos[to]=d.settings.videos[old];delete d.settings.videos[old]}
         delete d.meta.ex[old]}
       changed=true}
+    if(d.notes)for(const old of Object.keys(A)){if(!d.notes[old])continue;const to=resolve(old);
+      d.notes[to]=d.notes[to]?d.notes[to]+'\n'+d.notes[old]:d.notes[old];delete d.notes[old];changed=true}
     for(const dt in d.log)for(const sid in d.log[dt])for(const ex in d.log[dt][sid]){
       if(!d.meta.ex[ex]){const s=snap(ex);if(s){d.meta.ex[ex]=s;changed=true}}}
     if((d.schema||1)<SCHEMA){d.schema=SCHEMA;changed=true}
@@ -92,6 +94,9 @@ const Store=(()=>{
   const pickSet=(date,sid,base,ex)=>{d.pick=d.pick||{};const P=(d.pick[date]=d.pick[date]||{});const Q=(P[sid]=P[sid]||{});
     if(!ex||ex===base)delete Q[base];else Q[base]=ex;
     if(!Object.keys(Q).length)delete P[sid];if(!Object.keys(P).length)delete d.pick[date];save()};
+  /* Notes par exercice (id de l’exercice choisi) : notes[exercice] = texte. Ajout au format, absent = aucune note. */
+  const noteGet=id=>(d.notes||{})[id]||'';
+  const noteSet=(id,text)=>{d.notes=d.notes||{};if((text||'').trim())d.notes[id]=text;else delete d.notes[id];save()};
   const resetSession=(date,sid)=>{stash('avant nouvelle séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}delete d.meta.sess[date+'|'+sid];save()};
   const countDone=(date,sid)=>{const L=(d.log[date]||{})[sid]||{};return Object.keys(L).reduce((n,ex)=>n+doneSets(L[ex]).length,0)};
 
@@ -105,7 +110,7 @@ const Store=(()=>{
   const undo=()=>{const u=JSON.parse(localStorage.getItem(UNDO)||'null');if(!u)throw new Error('none');
     stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
 
-  return{d,save,today,get,setSet,pickGet,pickSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,
+  return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
       stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},

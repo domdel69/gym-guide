@@ -96,7 +96,7 @@ function viewTrain(){
   const hasWarm=sess.stations.some((_,i)=>isWarm(sess,i));
   const rows=sess.stations.map((st,i)=>{
     const d=stationDone(sess,i),head=hasWarm&&(i===0||isWarm(sess,i-1)!==isWarm(sess,i))?`<h2>${isWarm(sess,i)?'Échauffement · 6 min':'Séance'}</h2>`:'';
-    return head+`<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':stLabel(sess,i).n}</span><span class="t">`+
+    return head+`<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':stLabel(sess,i).n}</span><span class="t">${st.length>1?'<span class="ss">Superset</span>':''}`+
       st.map(r=>{const it=E(sess,r);return `<b>${esc(EX[it.ex].en)}</b><span>${esc(EX[it.ex].fr)}</span>`+(r.alt?`<span class="alt-hint">⇄ ${r.alt.length+1} variantes</span>`:'')}).join('')+
       `</span><span class="sr">${st.map(r=>{const it=E(sess,r);return it.sets>1||EX[it.ex].kind!=='tick'?`${it.sets}×${esc(it.reps)}`:esc(it.reps)}).join('<br>')}</span></button>`}).join('');
   const edit=S.date!==Store.today();
@@ -112,6 +112,7 @@ function viewTrain(){
 function viewStation(sess,si){
   const st=sess.stations[si],raw=st[Math.min(S.exi,st.length-1)],date=curDate(),it=E(sess,raw,date),ex=EX[it.ex];
   const prog=sess.stations.map((_,i)=>`<i class="${stationDone(sess,i)?'on':''}${i===si?' cur':''}"></i>`).join('');
+  const ssBar=st.length>1?`<div class="ss-bar"><span class="ss">Superset</span><span class="mute small">alterne les deux exercices</span></div>`:'';
   const tabs=st.length>1?`<div class="ex-tabs">`+st.map((x,k)=>`<button data-act="ex" data-k="${k}" aria-selected="${k===S.exi}">${esc(EX[E(sess,x,date).ex].en)}<small>${setsDone(sess,x,date)}/${E(sess,x,date).sets} séries</small></button>`).join('')+`</div>`:'';
   const prev=Store.last(it.ex,date),logged=Store.get(date,sess.id,it.ex);
   const kind=ex.kind;let sets='';
@@ -131,13 +132,18 @@ function viewStation(sess,si){
   const video=!vok?`<div class="novid"><span>Pas de vidéo par défaut.</span><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Chercher une démo ↗</a></div>`:S.vid&&vok?`<iframe src="https://www.youtube-nocookie.com/embed/${vid}?playsinline=1&rel=0&autoplay=1" title="${esc(ex.en)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
     :`<button class="play" data-act="vid" aria-label="Lire la vidéo"></button>`;
   const chips=raw.alt?`<div class="alts"><span class="mute small">Variante : choisis selon ce qui est libre</span><div class="chips">`+[{ex:raw.ex}].concat(raw.alt).filter(o=>o.ex!==it.ex).map(o=>`<button class="chip" data-act="alt" data-base="${esc(raw.ex)}" data-ex="${esc(o.ex)}">${esc(EX[o.ex].en)}${o.ex===raw.ex?'<small>prévu</small>':''}</button>`).join('')+`</div></div>`:'';
+  const note=Store.noteGet(it.ex);
+  const vidFold=`<details class="card fold" data-k="vid"${S.open.vid?' open':''}><summary><h3>Vidéo</h3></summary><div class="fold-b"><div class="video">${video}</div>
+   <div class="vlinks">${vok?`<a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a>`:'<span></span>'}<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Autres démos ↗</a></div></div></details>`;
+  const noteFold=`<details class="card fold" data-k="notes"${S.open.notes?' open':''}><summary><h3>Notes</h3>${note?'<span class="sr small">écrite</span>':''}</summary><div class="fold-b">
+   <textarea id="exnote" data-ex="${esc(it.ex)}" rows="3" placeholder="Réglage de la machine, sensations, rappel…" aria-label="Notes sur ${esc(ex.en)}">${esc(note)}</textarea>
+   <p class="mute small">Valable pour cet exercice dans toutes les séances. Reste sur ce téléphone.</p></div></details>`;
   const last=si===sess.stations.length-1;
   const editBar=date!==Store.today()?`<div class="note editing">Modification de la séance du <b>${fmtDay(date)}</b></div>`:'';
   return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">${stLabel(sess,si).txt}</span></div>${editBar}
-   <div class="prog">${prog}</div>${tabs}
+   <div class="prog">${prog}</div>${ssBar}${tabs}
    <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>${chips}
-   <div class="video">${video}</div>
-   <div class="vlinks">${vok?`<a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a>`:'<span></span>'}<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Autres démos ↗</a></div>
+   ${vidFold}${noteFold}
    <div class="target"><span class="mute">Objectif</span><b>${kind==='tick'&&it.sets===1?esc(it.reps):it.sets+' × '+esc(it.reps)}</b></div>
    <div class="sets">${sets}</div><div class="last">${esc(lastTxt)}</div>
    ${it.note?`<div class="note">${esc(it.note)}</div>`:''}${ex.note?`<div class="note">${esc(ex.note)}</div>`:''}
@@ -156,15 +162,36 @@ function onTick(k){
   beepPrime();
   if(it.rest&&date===Store.today())startTimer(it.rest,ex.en);
   const other=st.findIndex((x,j)=>j!==S.exi&&setsDone(sess,x,date)<E(sess,x,date).sets);
-  if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,st[S.exi],date)){S.exi=other;S.vid=false;scrollTo(0,0)}
+  if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,st[S.exi],date)){S.exi=other;S.vid=false;S.open.vid=S.open.notes=false;scrollTo(0,0)}
   render();
 }
-function goStation(i){S.st=i;S.exi=0;S.vid=false;scrollTo(0,0);wake();render()}
+function goStation(i){S.st=i;S.exi=0;S.vid=false;S.open.vid=S.open.notes=false;scrollTo(0,0);wake();render()}
 
 /* ---------- minuteur de repos (basé sur l’heure de fin, survit à la mise en veille) ---------- */
-let T=null,tick=null,actx=null;
-function beepPrime(){try{actx=actx||new(window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}}
-function beep(){if(!Store.d.settings.sound)return;try{beepPrime();[0,.25,.5].forEach(o=>{const os=actx.createOscillator(),g=actx.createGain();os.frequency.value=o===.5?1100:880;g.gain.value=.25;os.connect(g);g.connect(actx.destination);os.start(actx.currentTime+o);os.stop(actx.currentTime+o+.15)})}catch(e){}
+let T=null,tick=null,actx=null,aud=null,audOk=false,wavUrl=null;
+/* Bip de fin de repos. Deux modes (Réglages) :
+   - prioritaire (défaut) : élément <audio> (canal « lecture » d’iOS : audible même en mode silencieux et même si le contexte Web Audio est suspendu ; peut mettre la musique en pause un instant) ;
+   - mélangé : Web Audio en session « ambient » (ne coupe pas la musique, mais muet en mode silencieux).
+   L’élément <audio> est « débloqué » par un geste (coche d’une série) ; en cas d’échec, repli sur Web Audio. */
+const sndMode=()=>Store.d.settings.soundMode==='mix'?'mix':'priority';
+function makeWav(){const sr=22050,tones=[[0,880],[.25,880],[.5,1100]],n=Math.floor(sr*.7),b=new ArrayBuffer(44+n*2),v=new DataView(b);
+  const w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const t=i/sr;let x=0;for(const[o,f]of tones){const u=t-o;if(u>=0&&u<.15)x+=Math.sin(2*Math.PI*f*u)*Math.min(1,u/.008,(.15-u)/.02)*.55}v.setInt16(44+i*2,Math.round(Math.max(-1,Math.min(1,x))*32767),true)}
+  return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
+const ensureAud=()=>{if(!aud){wavUrl=wavUrl||makeWav();aud=new Audio(wavUrl);aud.preload='auto'}return aud};
+const audSession=t=>{try{if(navigator.audioSession)navigator.audioSession.type=t}catch(e){}};
+function beepPrime(){/* à appeler depuis un geste de l’utilisateur */
+  try{if(sndMode()==='priority'){const a=ensureAud();
+      if(!audOk){a.muted=true;const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false;audOk=true}).catch(()=>{a.muted=false})}}
+    else audSession('ambient');
+    actx=actx||new(window.AudioContext||window.webkitAudioContext)();if(actx.state!=='running')actx.resume()}catch(e){}}
+function webBeep(type){try{audSession(type);actx=actx||new(window.AudioContext||window.webkitAudioContext)();if(actx.state!=='running')actx.resume();
+  [0,.25,.5].forEach(o=>{const os=actx.createOscillator(),g=actx.createGain();os.frequency.value=o===.5?1100:880;g.gain.value=.25;os.connect(g);g.connect(actx.destination);os.start(actx.currentTime+o);os.stop(actx.currentTime+o+.15)})}catch(e){}}
+function beep(test){
+  if(!test&&!Store.d.settings.sound)return;
+  if(sndMode()==='priority'){try{const a=ensureAud();a.muted=false;a.currentTime=0;const p=a.play();if(test)audOk=true;if(p&&p.catch)p.catch(()=>webBeep('playback'))}catch(e){webBeep('playback')}}
+  else webBeep('ambient');
   try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}
 function startTimer(sec,label){T={end:Date.now()+sec*1000,label,fired:false};clearInterval(tick);tick=setInterval(drawTimer,250);drawTimer()}
 function stopTimer(){T=null;clearInterval(tick);$('#timer').hidden=true;$('#timer').className='timer'}
@@ -201,10 +228,11 @@ function onAct(e){
   else if(a==='home'){S.sess=null;S.date=null;S.st=null;scrollTo(0,0);render()}
   else if(a==='open')goStation(+b.dataset.i);
   else if(a==='list'){S.st=null;render()}
-  else if(a==='ex'){S.exi=+b.dataset.k;S.vid=false;render()}
+  else if(a==='ex'){S.exi=+b.dataset.k;S.vid=false;S.open.vid=S.open.notes=false;render()}
   else if(a==='vid'){S.vid=true;render()}
+  else if(a==='sndtest'){beep(true);toast('Son lancé')}
   else if(a==='goprog'){S.tab='settings';S.open.program=true;S.st=null;persist();scrollTo(0,0);render()}
-  else if(a==='alt'){Store.pickSet(curDate(),sess.id,b.dataset.base,b.dataset.ex);S.vid=false;render()}
+  else if(a==='alt'){Store.pickSet(curDate(),sess.id,b.dataset.base,b.dataset.ex);S.vid=false;S.open.vid=S.open.notes=false;render()}
   else if(a==='tick')onTick(+b.dataset.k);
   else if(a==='prev'&&S.st>0)goStation(S.st-1);
   else if(a==='next'){if(S.st<sess.stations.length-1)goStation(S.st+1);else{S.st=null;scrollTo(0,0);render();toast('Séance terminée. Bien joué.')}}

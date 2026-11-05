@@ -94,13 +94,18 @@ function viewSettings(){
   return `<h1>Réglages</h1>
    <div class="card"><h3>Séance</h3>
     <label class="switch"><span>Garder l’écran allumé en station</span><input type="checkbox" data-opt="awake" ${s.awake?'checked':''}></label>
-    <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label></div>
+    <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label>
+    <div class="cfg"><div class="l"><span>Mode du son</span></div>
+     <select data-snd aria-label="Mode du son">
+      <option value="priority"${s.soundMode!=='mix'?' selected':''}>Prioritaire</option><option value="mix"${s.soundMode==='mix'?' selected':''}>Mélangé à la musique</option></select>
+     <p class="mute small">Prioritaire : audible avec la musique et en mode silencieux, mais peut mettre la musique en pause un instant. Mélangé : ne coupe pas la musique, mais muet si le mode silencieux de l’iPhone est activé.</p>
+     <button class="btn sm" data-act="sndtest">Tester le son</button></div></div>
    <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button>
     ${prev.length&&!inArchive?`<details class="sub" data-k="versions"${S.open.versions?' open':''}><summary>Versions précédentes</summary><p class="mute small">Si la dernière version pose problème, ouvre une version précédente. Le journal est partagé : tes séries restent visibles.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.map(v=>`<a class="btn sm" href="releases/${esc(v)}/">Version ${esc(v)}</a>`).join('')}</div></details>`:''}</div>
    ${fold('program','Programme',progBody())}
    ${fold('backup','Sauvegarde',`<p class="mute small">Tes séries sont enregistrées sur ce téléphone seulement. Exporte un fichier de temps en temps.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="export">Exporter</button><button class="btn" data-act="copy">Copier</button><label class="btn" for="imp">Importer</label><input id="imp" type="file" accept="application/json,.json" hidden></div>
-    <p class="mute small" style="margin-top:14px">Effacer supprime toutes les séries enregistrées sur ce téléphone. Les liens vidéo et les options sont conservés. Exporte d’abord si tu veux garder une copie.</p>
+    <p class="mute small" style="margin-top:14px">Effacer supprime toutes les séries enregistrées sur ce téléphone. Les liens vidéo, les notes et les options sont conservés. Exporte d’abord si tu veux garder une copie.</p>
     <button class="btn" data-act="clearlog">Effacer le journal</button>
     ${ud?`<p class="mute small" style="margin-top:14px">Dernier état conservé : ${esc(ud.why)}, le ${esc(fmtDate(ud.at.slice(0,10)))}.</p><button class="btn" data-act="undo">Annuler (restaurer cet état)</button>`:''}`)}
    ${fold('print','À imprimer',`<p class="mute small">Une feuille A4 par séance, avec cases pour noter reps et charges. Pour les jours où le téléphone est à plat.</p>
@@ -151,10 +156,14 @@ document.addEventListener('change',e=>{
     const p=Store.parseYt(raw);if(!p){toast('Lien YouTube invalide');render();return}
     if(p===EX[id].yt)delete Store.d.settings.videos[id];else Store.d.settings.videos[id]=p;Store.save();toast('Vidéo enregistrée');render()}
   else if(t.dataset.start!==undefined){Store.d.settings.start=t.value||null;Store.save();toast(t.value?'Date de départ enregistrée':'Date effacée');render()}
+  else if(t.dataset.snd!==undefined){Store.d.settings.soundMode=t.value;Store.save();toast(t.value==='mix'?'Son mélangé à la musique':'Son prioritaire')}
+  else if(t.id==='exnote'){Store.noteSet(t.dataset.ex,t.value)}
   else if(t.dataset.opt){Store.d.settings[t.dataset.opt]=t.checked;Store.save()}
   else if(t.id==='imp'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{Store.importJson(r.result);toast('Sauvegarde importée');render()}catch(x){toast('Fichier non reconnu')}};r.readAsText(t.files[0])}
 });
 
+let noteTimer=null;
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.id==='exnote'){clearTimeout(noteTimer);noteTimer=setTimeout(()=>Store.noteSet(t.dataset.ex,t.value),400)}});
 render();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   const had=!!navigator.serviceWorker.controller;let reloaded=false;
