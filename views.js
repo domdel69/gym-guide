@@ -21,6 +21,14 @@ const setTxt=(s,kind)=>(s.reps!=null?s.reps:'–')+(kind==='time'?' s':'')+(noKg
 const kgOf=(sets,kind)=>{const k=sets.map(x=>x.kg).filter(v=>v!=null&&v!=='');return k.length?(kind==='assist'?Math.min(...k):Math.max(...k)):null};
 const repsOf=sets=>{const r=sets.map(x=>x.reps).filter(v=>v!=null);return r.length?Math.max(...r):null};
 
+/* Volume total d’une séance : reps × charge (lift), reps × (poids de corps − assistance) (assist, si le poids est saisi), total de reps ou de secondes sinon. */
+const volOf=(sets,kind)=>{const bw=+Store.d.settings.bodyKg||0;let t=0,n=0;
+  for(const s of sets){const r=+s.reps;if(!(r>=0)||s.reps==null)continue;
+    if(noKg(kind)){t+=r;n++}
+    else if(kind==='assist'){if(!bw||s.kg==null||s.kg==='')continue;t+=r*Math.max(0,bw-s.kg);n++}
+    else{if(s.kg==null||s.kg===''||!(+s.kg>=0))continue;t+=r*(+s.kg);n++}}
+  return n?Math.round(t):null};
+
 /* Courbe SVG : dates proportionnelles au temps, valeurs annotées. */
 function chart(pts,{title,unit,note}){
   const W=320,H=170,L=38,R=14,T=20,B=28;
@@ -53,10 +61,14 @@ function viewExercise(id){
   const asc=h.slice().reverse(),kind=inf.kind;
   const kgPts=noKg(kind)?[]:asc.map(x=>({date:x.date,v:kgOf(x.sets,kind)})).filter(p=>p.v!=null);
   const repPts=asc.map(x=>({date:x.date,v:repsOf(x.sets)})).filter(p=>p.v!=null);
+  const volPts=asc.map(x=>({date:x.date,v:volOf(x.sets,kind)})).filter(p=>p.v!=null);
+  const volTitle=kind==='time'?'Durée totale (s)':noKg(kind)?'Reps totales':'Volume total (kg)',volUnit=kind==='time'?' s':noKg(kind)?' reps':' kg';
+  const volNote=kind==='time'?'Somme des durées de toutes les séries.':noKg(kind)?'Somme des reps de toutes les séries.':kind==='assist'?'Reps × (poids de corps − assistance), toutes séries. Le poids de corps se règle dans Réglages.':'Somme de reps × charge sur toutes les séries : combine les deux courbes en une seule.';
   const best=kgPts.length?(kind==='assist'?Math.min(...kgPts.map(p=>p.v)):Math.max(...kgPts.map(p=>p.v))):null;
   const rows=h.map(x=>`<li><b>${fmtDay(x.date)}</b> <span class="mute small">${x.sids.map(sid=>esc(Store.sessTitle(x.date,sid).split(' : ')[0])).join(', ')}</span><div>${x.sets.map(s=>esc(setTxt(s,kind))).join(' · ')}${kind==='assist'?' <span class="mute small">(assistance)</span>':''}</div></li>`).join('');
   return back+`<h1>${esc(inf.en)}</h1><div class="mute">${esc(inf.fr)}${inf.live?'':' · ancien exercice'}</div>
    <p class="small mute" style="margin-top:8px">${h.length} séance${h.length>1?'s':''}${best!=null?` · ${kind==='assist'?'assistance la plus basse':'meilleure charge'} : <b style="color:var(--ink)">${nf(best)} kg</b>`:''}</p>
+   ${volPts.length?chart(volPts,{title:volTitle,unit:volUnit,note:volNote}):(kind==='assist'?'<div class="card"><p class="mute small">Volume total : renseigne ton poids de corps dans Réglages pour calculer reps × (poids − assistance).</p></div>':'')}
    ${kgPts.length?chart(kgPts,{title:kind==='assist'?'Assistance (kg)':'Charge (kg)',unit:' kg',note:kind==='assist'?'Plus bas = mieux. Valeur la plus basse de chaque séance.':'Charge la plus haute de chaque séance.'}):''}
    ${chart(repPts,{title:kind==='time'?'Durée (s)':'Répétitions',unit:kind==='time'?' s':' reps',note:kind==='time'?'Durée la plus longue de chaque séance.':'Meilleure série de chaque séance.'})}
    <div class="card"><h3>Historique</h3><ul class="plain">${rows}</ul></div>`;
@@ -71,8 +83,8 @@ function viewProgress(){
   if(P.mode==='sessions'){
     const list=ss.map(x=>{const key='ps-'+x.date+'-'+x.sid,n=x.exs.reduce((m,e)=>m+e.sets.length,0);
       const lines=x.exs.map(e=>{const inf=Store.info(e.ex);return `<li><button class="lnk" data-act="exdetail" data-ex="${esc(e.ex)}">${esc(inf.en)} ›</button><div>${e.sets.map(s=>esc(setTxt(s,inf.kind))).join(' · ')}${inf.kind==='assist'?' <span class="mute small">(assistance)</span>':''}</div></li>`}).join('');
-      return `<details class="card fold" data-k="${esc(key)}"${S.open[key]?' open':''}><summary><span class="sm"><b>${fmtDay(x.date)}</b><span class="mute">${esc(x.title)}</span></span><span class="sr small">${x.exs.length} exercice${x.exs.length>1?'s':''} · ${n} série${n>1?'s':''}</span></summary><ul class="plain">${lines}</ul></details>`}).join('');
-    return `<h1>Suivi</h1>${seg}<p class="mute small">${ss.length} séance${ss.length>1?'s':''} enregistrée${ss.length>1?'s':''}. Touche une séance pour voir le détail, un exercice pour voir sa courbe.</p>${list}`;
+      return window.swipe(x.date,x.sid,`<details class="card fold" data-k="${esc(key)}"${S.open[key]?' open':''}><summary><span class="sm"><b>${fmtDay(x.date)}</b><span class="mute">${esc(x.title)}</span></span><span class="sr small">${x.exs.length} exercice${x.exs.length>1?'s':''} · ${n} série${n>1?'s':''}</span></summary><ul class="plain">${lines}</ul></details>`)}).join('');
+    return `<h1>Suivi</h1>${seg}<p class="mute small">${ss.length} séance${ss.length>1?'s':''} enregistrée${ss.length>1?'s':''}. Touche une séance pour voir le détail, un exercice pour voir sa courbe. Glisse une séance vers la droite pour la supprimer.</p>${list}`;
   }
   const {live,old}=Store.trackedIds();
   const card=id=>{const inf=Store.info(id),h=Store.history(id),l=h[0],kind=inf.kind;
@@ -95,11 +107,14 @@ function viewSettings(){
    <div class="card"><h3>Séance</h3>
     <label class="switch"><span>Garder l’écran allumé en station</span><input type="checkbox" data-opt="awake" ${s.awake?'checked':''}></label>
     <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label>
+    <div class="cfg"><div class="l"><span>Poids de corps (kg)</span></div>
+     <input type="number" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${s.bodyKg||''}" placeholder="ex. 80" aria-label="Poids de corps">
+     <p class="mute small">Sert uniquement au volume des tractions assistées. Reste sur ce téléphone.</p></div>
     <div class="cfg"><div class="l"><span>Mode du son</span></div>
      <select data-snd aria-label="Mode du son">
       <option value="priority"${s.soundMode!=='mix'?' selected':''}>Prioritaire</option><option value="mix"${s.soundMode==='mix'?' selected':''}>Mélangé à la musique</option></select>
      <p class="mute small">Prioritaire : audible avec la musique et en mode silencieux, mais peut mettre la musique en pause un instant. Mélangé : ne coupe pas la musique, mais muet si le mode silencieux de l’iPhone est activé.</p>
-     <button class="btn sm" data-act="sndtest">Tester le son</button></div></div>
+     <button class="btn sm" data-act="sndtest">Tester le son</button><p class="mute small" id="sndstat">${esc(sndStatus())}</p></div></div>
    <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button>
     ${prev.length&&!inArchive?`<details class="sub" data-k="versions"${S.open.versions?' open':''}><summary>Versions précédentes</summary><p class="mute small">Si la dernière version pose problème, ouvre une version précédente. Le journal est partagé : tes séries restent visibles.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.map(v=>`<a class="btn sm" href="releases/${esc(v)}/">Version ${esc(v)}</a>`).join('')}</div></details>`:''}</div>
    ${fold('program','Programme',progBody())}
@@ -156,7 +171,8 @@ document.addEventListener('change',e=>{
     const p=Store.parseYt(raw);if(!p){toast('Lien YouTube invalide');render();return}
     if(p===EX[id].yt)delete Store.d.settings.videos[id];else Store.d.settings.videos[id]=p;Store.save();toast('Vidéo enregistrée');render()}
   else if(t.dataset.start!==undefined){Store.d.settings.start=t.value||null;Store.save();toast(t.value?'Date de départ enregistrée':'Date effacée');render()}
-  else if(t.dataset.snd!==undefined){Store.d.settings.soundMode=t.value;Store.save();toast(t.value==='mix'?'Son mélangé à la musique':'Son prioritaire')}
+  else if(t.dataset.body!==undefined){const n=parseFloat(String(t.value).replace(',','.'));Store.d.settings.bodyKg=n>0?n:null;Store.save();toast(n>0?'Poids de corps enregistré':'Poids de corps effacé')}
+  else if(t.dataset.snd!==undefined){Store.d.settings.soundMode=t.value;Store.save();resetSound();toast(t.value==='mix'?'Son mélangé à la musique':'Son prioritaire')}
   else if(t.id==='exnote'){Store.noteSet(t.dataset.ex,t.value)}
   else if(t.dataset.opt){Store.d.settings[t.dataset.opt]=t.checked;Store.save()}
   else if(t.id==='imp'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{Store.importJson(r.result);toast('Sauvegarde importée');render()}catch(x){toast('Fichier non reconnu')}};r.readAsText(t.files[0])}

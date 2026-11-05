@@ -110,7 +110,8 @@ const Store=(()=>{
   const undo=()=>{const u=JSON.parse(localStorage.getItem(UNDO)||'null');if(!u)throw new Error('none');
     stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
 
-  return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,
+  const deleteSession=(date,sid)=>{stash('avant suppression de séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}delete d.meta.sess[date+'|'+sid];save()};
+  return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,deleteSession,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
       stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},
