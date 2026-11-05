@@ -44,9 +44,7 @@ function progCard(){
   if(!x)return `<div class="card"><h3>Programme</h3><p class="mute small">Définis la date de ta première séance pour suivre les semaines du programme.</p><button class="btn" data-act="goprog">Définir la date de départ</button></div>`;
   if(x.before)return `<div class="card"><h3>Programme</h3><p class="mute small">Départ le ${fmtDate(Store.d.settings.start)} : dans ${x.before} jour${x.before>1?'s':''}.</p></div>`;
   if(x.done)return `<div class="card"><h3>Programme terminé</h3><p class="mute small">Les 12 semaines sont passées. Exporte ton journal (Réglages > Sauvegarde) et fais le bilan avec Claude.</p></div>`;
-  const p=PHASE(x.w),seg=Array.from({length:12},(_,i)=>`<i class="${i+1<x.w?'on':''}${i+1===x.w?' cur':''}${i+1===6||i+1===12?' dl':''}"></i>`).join('');
-  return `<div class="card progcard"><div class="pc-h"><b>Semaine ${x.w} / 12</b><span class="mute small">Bloc ${p.blk} · ${p.name}</span></div>
-   <div class="prog wk" aria-hidden="true">${seg}</div><p class="small mute">${esc(p.note)}</p>${p.dl?`<div class="note deload"><b>Semaine allégée.</b> ${esc(DELOAD_TXT)}</div>`:''}</div>`;
+  return '';
 }
 function sessBanner(date){
   const x=weekOf(date);if(!x||!x.w)return '';const p=PHASE(x.w);
@@ -64,13 +62,46 @@ function checkCard(){
    <div class="inline"><input id="waist" inputmode="decimal" placeholder="Tour de taille (cm), optionnel" aria-label="Tour de taille en centimètres"><button class="btn primary" data-act="checkdone">Fait aujourd’hui</button></div></div>`;
 }
 
+/* Accueil : séance du jour en grand, semaine du lundi au dimanche, puis toutes les séances. */
+const SLET={a:'A',b:'B',c:'C',home:'M'};
+const mondayOf=d=>addDays(d,-((new Date(D0(d)*864e5).getUTCDay()+6)%7));
+const GYM=['a','b','c'];
+function weekMap(){const mo=mondayOf(Store.today()),days=[];
+  for(let i=0;i<7;i++){const dt=addDays(mo,i);days.push({dt,sids:SESSIONS.map(x=>x.id).filter(id=>Store.countDone(dt,id)>0)})}
+  return days}
+/* Séance proposée : A puis B tant qu’elles manquent cette semaine (2 séances salle, C compte pour une), sinon la routine maison ; 48 h entre deux séances salle. */
+function suggest(days){
+  const td=Store.today(),all=days.flatMap(d=>d.sids),gym=all.filter(i=>GYM.includes(i)),home=all.filter(i=>i==='home').length;
+  const doneToday=(days.find(d=>d.dt===td)||{sids:[]}).sids;
+  if(doneToday.length){const id=doneToday[doneToday.length-1];return{done:true,sid:id,gym:GYM.includes(id)}}
+  const ydt=addDays(td,-1),yGym=(days.find(d=>d.dt===ydt)||{sids:[]}).sids.some(i=>GYM.includes(i));
+  let sid=null;
+  if(gym.length<2)sid=!all.includes('a')&&!all.includes('c')?'a':!all.includes('b')?'b':'a';
+  if(gym.length<2&&all.includes('c')&&!all.includes('a'))sid=!all.includes('b')?'b':'a';
+  if(sid&&yGym)return{sid:'home',why:'Séance salle hier : 48 h de repos entre deux séances salle.',alt:sid};
+  if(sid)return{sid,alt:null};
+  return{sid:'home',why:home>=3?'Semaine salle faite et routine maison faite 3 fois.':'Semaine salle faite : la routine maison complète la semaine.',alt:null}}
 function viewHome(){
   const card=sid=>{const s=sessOf(sid),ld=Store.lastDate(sid);
     return `<button class="home-card" data-act="sess" data-id="${sid}"><span class="hc-t"><b>${esc(s.title)}</b><span>${esc(s.dur)} · ${esc(s.focus)}</span><span class="small">${ld?'Dernière fois : '+fmtDay(ld):'Pas encore faite'}</span></span><span class="chev" aria-hidden="true">›</span></button>`};
-  return `<h1>Gym Guide</h1><div class="mute">${fmtDay(Store.today())}</div>
-   ${progCard()}${checkCard()}
-   <h2>À la salle</h2><div class="list">${card('a')}${card('b')}${card('c')}</div>
-   <h2>À la maison</h2><div class="list">${card('home')}</div>`;
+  const days=weekMap(),sg=suggest(days),td=Store.today(),x=weekOf(td),inProg=x&&x.w,p=inProg?PHASE(x.w):null;
+  const all=days.flatMap(d=>d.sids),ng=all.filter(i=>GYM.includes(i)).length,nh=all.filter(i=>i==='home').length;
+  const sess=sessOf(sg.sid);
+  const kick=inProg?`Semaine ${x.w} / 12 · Bloc ${p.blk} · ${p.name}`:fmtDay(td);
+  const bar=inProg?`<span class="prog wk" aria-hidden="true">${Array.from({length:12},(_,i)=>`<i class="${i+1<x.w?'on':''}${i+1===x.w?' cur':''}${i+1===6||i+1===12?' dl':''}"></i>`).join('')}</span>`:'';
+  const hero=`<button class="hero${sg.done?' done':''}" data-act="sess" data-id="${sg.sid}"><span class="hero-k">${esc(kick)}</span>
+   <b class="hero-t">${sg.done?esc(sess.title)+' faite ✓':esc(sess.title)}</b>
+   <span class="hero-s">${esc(sess.dur)} · ${esc(sess.focus)}</span>
+   ${sg.why?`<span class="hero-w">${esc(sg.why)}</span>`:''}
+   ${sg.done&&sg.gym?'<span class="hero-w">Repos conseillé : 48 h avant la prochaine séance salle.</span>':''}
+   <span class="hero-n">Cette semaine : ${ng}/2 séances salle · ${nh} maison</span>${bar}
+   <span class="hero-go">${sg.done?'Voir ou modifier ›':'Commencer ›'}</span></button>`+
+   (sg.alt?`<button class="btn hero-alt" data-act="sess" data-id="${sg.alt}">Faire quand même la ${esc(sessOf(sg.alt).title)}</button>`:'');
+  const strip=`<h2>Cette semaine</h2><div class="wstrip" role="list">`+days.map(d=>{const dd=d.dt.slice(8).replace(/^0/,''),dn=DAYS[new Date(D0(d.dt)*864e5).getUTCDay()].replace('.','');
+    return `<div class="wd${d.dt===td?' today':''}${d.sids.length?' has':''}${d.dt>td?' fut':''}" role="listitem" aria-label="${esc(fmtDay(d.dt))}${d.sids.length?' : '+d.sids.map(i=>sessOf(i).title).join(', '):''}"><small>${esc(dn)}</small><b>${dd}</b><span>${d.sids.length?d.sids.map(i=>SLET[i]||'').join(' '):'·'}</span></div>`}).join('')+`</div>`;
+  return `<h1>Gym Guide</h1>
+   ${hero}${inProg&&p.dl?`<div class="note deload"><b>Semaine allégée.</b> ${esc(DELOAD_TXT)}</div>`:''}${strip}${progCard()}${checkCard()}
+   <h2>Toutes les séances</h2><div class="list">${card('a')}${card('b')}${card('c')}${card('home')}</div>`;
 }
 /* Écran d'une séance : nouvelle séance en haut, puis toutes les séances enregistrées, de la plus récente à la plus ancienne. */
 const swipe=(dt,sid,html)=>`<div class="sw"><div class="sw-bg"><button class="sw-del" data-act="swdel" data-d="${dt}" data-s="${esc(sid)}">Supprimer</button></div><div class="sw-front">${html}</div></div>`;
@@ -118,12 +149,12 @@ function viewStation(sess,si){
   const ssBar=st.length>1?`<div class="ss-bar"><span class="ss">Superset</span><span class="mute small">alterne les deux exercices</span></div>`:'';
   const tabs=st.length>1?`<div class="ex-tabs">`+st.map((x,k)=>`<button data-act="ex" data-k="${k}" aria-selected="${k===S.exi}">${esc(EX[E(sess,x,date).ex].en)}<small>${setsDone(sess,x,date)}/${E(sess,x,date).sets} séries</small></button>`).join('')+`</div>`:'';
   const prev=Store.last(it.ex,date),logged=Store.get(date,sess.id,it.ex);
-  const kind=ex.kind;let sets='';
+  const kind=ex.kind;let sets='';const firstOpen=(()=>{for(let k=0;k<it.sets;k++)if(!(logged[k]&&logged[k].done))return k;return -1})();
   for(let k=0;k<it.sets;k++){
     const s=logged[k]||{},ps=prev&&(prev.sets[k]||prev.sets[prev.sets.length-1]);
     const pre=S.date===Store.today()?ps:null;
     const r=s.reps!=null?s.reps:(pre&&pre.reps!=null?pre.reps:''),w=s.kg!=null?s.kg:(pre&&pre.kg!=null?pre.kg:'');
-    const cls='set'+(s.done?' done':'')+(kind==='tick'?' t1':'');
+    const cls='set'+(s.done?' done':'')+(kind==='tick'?' t1':'')+(!s.done&&k===firstOpen?' cur':'');
     sets+=`<div class="${cls}"><span class="n">${k+1}</span>`+
      (kind==='tick'?`<span>${esc(it.reps)}</span>`:
       `<div><label for="r${k}">${kind==='time'?'Durée (s)':'Reps'}</label><input id="r${k}" inputmode="numeric" pattern="[0-9]*" value="${esc(r)}" placeholder="${ps&&ps.reps!=null?ps.reps:first(it.reps)}" data-act="inp"></div>`+
@@ -146,13 +177,13 @@ function viewStation(sess,si){
   return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">${stLabel(sess,si).txt}</span></div>${editBar}
    <div class="prog">${prog}</div>${ssBar}${tabs}
    <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>${chips}
-   ${vidFold}${noteFold}
    <div class="target"><span class="mute">Objectif</span><b>${kind==='tick'&&it.sets===1?esc(it.reps):it.sets+' × '+esc(it.reps)}</b></div>
    <div class="sets">${sets}</div><div class="last">${esc(lastTxt)}</div>
+   <div class="navbtns"><button class="btn big" data-act="prev"${si===0?' disabled':''}>‹ Préc.</button><button class="btn big primary${firstOpen<0?' ready':''}" data-act="next">${last?'Terminer ✓':'Station suivante ›'}</button></div>
    ${it.note?`<div class="note">${esc(it.note)}</div>`:''}${ex.note?`<div class="note">${esc(ex.note)}</div>`:''}
+   ${vidFold}${noteFold}
    <ul class="cues">${ex.cues.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>
-   <div class="avoid"><b>À éviter :</b> ${esc(ex.avoid)}</div>
-   <div class="navbtns"><button class="btn big" data-act="prev"${si===0?' disabled':''}>‹ Préc.</button><button class="btn big primary" data-act="next">${last?'Terminer ✓':'Station suivante ›'}</button></div>`;
+   <div class="avoid"><b>À éviter :</b> ${esc(ex.avoid)}</div>`;
 }
 
 function onTick(k){
@@ -216,7 +247,7 @@ function drawTimer(){
   if(left<=0&&!T.fired){T.fired=true;beep()}
   const m=Math.floor(Math.max(left,0)/60),s=Math.max(left,0)%60,over=left<=0;
   el.hidden=false;el.className='timer'+(over?' end':'');
-  el.innerHTML=`<div><span class="t" aria-live="off">${m}:${String(s).padStart(2,'0')}</span><span class="lbl">${over?'Repos terminé':'Repos'}</span>`+
+  el.innerHTML=`<div><span class="t" aria-live="off">${m}:${String(s).padStart(2,'0')}</span><span class="lbl">${over?'Repos terminé':'Repos'}${T.label?'<b>'+esc(T.label)+'</b>':''}</span>`+
    (over?'':`<button data-act="tm" data-d="-15">−15</button><button data-act="tm" data-d="15">+15</button>`)+`<button data-act="tmstop">${over?'OK':'Passer'}</button></div>`;
 }
 /* ---------- écran allumé ---------- */
