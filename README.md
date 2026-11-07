@@ -30,7 +30,7 @@ The phone log is `log[date][sessionId][exerciseId] = [{reps, kg, done, t}]`, plu
 Suivi excludes warm-up stations (items with `warm:true` in the sessions, placed at the start of A, B and C) and every exercise of kind `tick`.
 
 ## Rollback
-- From the phone: Réglages > Application > "Version x.y" opens the archived copy of that version. The log is shared (same origin), and a banner links back to the latest version.
+- From the phone: removed in 0.24 (no "Versions précédentes" section in Réglages). Archived copies stay reachable at `releases/<version>/` on the site; to restore one, ask Claude.
 - Permanent rollback (needs Claude or a terminal): restore the release commit (table below) as a new commit, so Pages redeploys:
   `git checkout f035aa9 -- . && sed -i "s/gym-guide-0.7/gym-guide-0.7-r1/" sw.js && git commit -am "Roll back to 0.7" && git push`
   (a new cache name makes phones refetch; `releases/` and `tools/` are restored too, so re-run `archive.py` afterwards if the listing is wrong).

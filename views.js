@@ -162,13 +162,10 @@ function viewSettings(){
   const vids=Object.keys(EX).map(id=>{const v=Store.videoId(id),custom=!!s.videos[id];
     return `<div class="cfg"><div class="l"><span>${esc(EX[id].en)}</span><span class="mute small">${custom?'modifiée':(EX[id].yt?'par défaut':'aucune')}</span></div>
       <input type="text" id="v-${id}" data-vid="${id}" value="${v?'https://youtu.be/'+esc(v):''}" placeholder="Lien YouTube" inputmode="url" autocapitalize="off" autocomplete="off" aria-label="Vidéo ${esc(EX[id].en)}"></div>`}).join('');
-  const prev=(window.RELEASES||[]).filter(v=>v!==window.APP_VERSION);
-  const inArchive=location.pathname.includes('/releases/');
   if(S.open.session===undefined)S.open.session=true;
   const wx=weekOf(Store.today()),progSub=!s.start?'date à définir':wx&&wx.w?'semaine '+wx.w+' / 12':wx&&wx.before?'départ dans '+wx.before+' j':'terminé',sessSub=(s.sound?'son activé':'son coupé')+(s.awake?' · écran allumé':'');
   return `<h1>Réglages</h1>
-   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button>
-    ${prev.length&&!inArchive?`<details class="sub" data-k="versions"${S.open.versions?' open':''}><summary>Versions précédentes</summary><p class="mute small">Si la dernière version pose problème, ouvre une version précédente. Le journal est partagé : tes séries restent visibles.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.map(v=>`<a class="btn sm" href="releases/${esc(v)}/">Version ${esc(v)}</a>`).join('')}</div></details>`:''}</div>
+   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button></div>
    ${fold('program','Programme',progBody(),progSub)}
    ${fold('session','Séance',`<label class="switch"><span>Garder l’écran allumé en station</span><input type="checkbox" data-opt="awake" ${s.awake?'checked':''}></label>
     <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label>
@@ -196,7 +193,7 @@ function progBody(){
    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" data-act="startnow">Aujourd’hui</button><button class="btn" data-act="startclear">Effacer la date</button></div>
    <p class="small" style="margin-top:8px">${state}${st?` Semaine 1 : ${fmtDate(st)}. Fin du programme : ${fmtDate(addDays(st,83))}.`:''}</p>
    <h3 style="margin-top:16px">Poids de corps</h3>
-   <input type="number" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${Store.d.settings.bodyKg||''}" placeholder="ex. 80" aria-label="Poids de corps en kg">
+   <input type="number" class="fin" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${Store.d.settings.bodyKg||''}" placeholder="ex. 80" aria-label="Poids de corps en kg">
    <p class="mute small">En kg. Sert uniquement au volume des tractions assistées. Reste sur ce téléphone.</p>
    <h3 style="margin-top:16px">Mesures et photos</h3>
    <p class="mute small">Tour de taille et photos (face, profil, dos) toutes les 6 semaines.${n?` Prochaines : ${fmtDate(n.due)}.`:''} Les chiffres restent sur ce téléphone.</p>
