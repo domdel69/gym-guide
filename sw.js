@@ -7,6 +7,10 @@ self.addEventListener('fetch',e=>{
   const u=new URL(e.request.url);
   if(e.request.method!=='GET'||u.origin!==location.origin)return;
   /* 0.27 : seules les réponses complètes (200) vont au cache ; la page d’accueil ne sert de secours qu’aux navigations. */
-  e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{if(r.ok&&r.status===200&&r.type==='basic'){const c=r.clone();e.waitUntil(caches.open(VERSION).then(x=>x.put(e.request,c)))}return r})
-    .catch(()=>caches.match(e.request).then(m=>m||(e.request.mode==='navigate'?caches.match('index.html'):Response.error()))));
+  /* 0.28 : si le site répond par une erreur (404 quand le site est hors ligne, 5xx), la copie hors ligne est servie aussi, pas seulement sans réseau. */
+  const fromCache=r=>caches.match(e.request).then(m=>m||(e.request.mode==='navigate'?caches.match('index.html'):null)).then(m=>m||r||Response.error());
+  e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{
+      if(r.ok&&r.status===200&&r.type==='basic'){const c=r.clone();e.waitUntil(caches.open(VERSION).then(x=>x.put(e.request,c)));return r}
+      return r.status>=400?fromCache(r):r})
+    .catch(()=>fromCache(null)));
 });
