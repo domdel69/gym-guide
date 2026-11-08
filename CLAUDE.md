@@ -35,7 +35,7 @@ The programme (what exercises, sets, reps, rests) lives in the user's private pl
 1. Edit; bump `version.js` and `sw.js` `VERSION`.
 2. `node tools/check_data.js`, then `--update`.
 3. `python3 tools/make_pdfs.py` (needs reportlab); `python3 tools/archive.py <v>`.
-4. Commit on a branch and open a pull request; never push to main (his rule since 2026-11-08). After he merges, add a row to the README table with the merge commit; optionally `git tag v<v> && git push --tags` (possible from a terminal).
+4. Commit, push main; add a row to the README table; optionally `git tag v<v> && git push --tags` (possible from a terminal).
 5. Outside the repo, in the user's Jarvis folder: zip of the app as `Fitness/App Backups/YYYYMMDD - App - Gym Guide 0.x.zip`; copy the 4 PDFs to `Fitness/Printable Workouts/` (`Workout A - 0.x.pdf`, B, C, `Home Routine - 0.x.pdf`); zip the previous version's 4 PDFs into `Previous Versions/YYYYMMDD - Workouts - Gym Guide 0.x.zip`, test with `unzip -t`, then remove the loose old PDFs (the user's documented routine; otherwise never delete).
 6. Update the plan file (sections 0, 7, 8, 9) and write a session log in `.cowork_logs/` (`YYYYMMDD_Session_Name_Log_vN.txt`, one line per action, `[YYYY-MM-DD HH:MM]`).
 

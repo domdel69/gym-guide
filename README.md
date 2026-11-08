@@ -19,7 +19,7 @@ Personal gym programme web app (PWA, French UI). Hosted on GitHub Pages, logs st
 2. `node tools/check_data.js` must pass. Then `node tools/check_data.js --update` (records the exercise ids as released).
 3. `python3 tools/make_pdfs.py`.
 4. `python3 tools/archive.py <version>` (copies the release to `releases/<version>/` and lists it in `version.js`).
-5. Commit on a branch and open a pull request (no direct pushes to main). After the merge, add the merge commit to the table below (tags cannot be pushed from Claude's session; create `v<version>` tags from a terminal if wanted).
+5. Commit and push main. Add the release commit to the table below (tags cannot be pushed from Claude's session; create `v<version>` tags from a terminal if wanted).
 
 ## Keeping the log consistent when the programme changes
 The phone log is `log[date][sessionId][exerciseId] = [{reps, kg, done, t}]`, plus `meta` (name and type snapshot per exercise and session). Rules:
