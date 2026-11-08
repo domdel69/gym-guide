@@ -70,7 +70,7 @@ def page(sid,warm):
     sx=''
     if s.get('stretch'):
         STR=data['STRETCH']
-        items=''.join(f"<span class='it'><span class='cb'></span>{e(STR[i]['fr'])} <span style='color:#555'>({STR[i]['t']} s{e(STR[i]['side'])})</span></span>" for i in s['stretch'])
+        items=''.join(f"<span class='it'><span class='cb'></span>{e(STR[i]['en'])} <span style='color:#555'>/ {e(STR[i]['fr'])}</span> <span style='color:#555'>({STR[i]['t']} s{e(STR[i]['side'])})</span></span>" for i in s['stretch'])
         sx=f"<div class='wu' style='margin-top:3mm'><b>Étirements</b>{items}</div>"
     w=f"<table><colgroup><col style='width:9mm'><col style='width:122mm'><col style='width:28mm'><col></colgroup><tr><th></th><th>Exercice</th><th>Objectif</th><th><div class='sets'>{heads.replace('th','div')}</div></th></tr>{body}</table>"
     return f"""<html><head><meta charset='utf-8'><style>{CSS}</style></head><body>

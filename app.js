@@ -15,7 +15,9 @@ const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.te
 
 /* Zone visible (iOS laisse parfois la page décalée après le clavier ou un défilement) : le corps suit la zone visible, la barre d’onglets se masque pendant la saisie. */
 (()=>{const vv=window.visualViewport,r=document.documentElement.style;
-  const fit=()=>{if(!vv||vv.scale>1.01)return;r.setProperty('--vvh',Math.round(vv.height)+'px');r.setProperty('--vvt',Math.round(vv.offsetTop)+'px')};
+  const fit=()=>{if(!vv)return;const kb=window.innerHeight-vv.height>120&&vv.scale<=1.01;
+    if(kb){r.setProperty('--vvt',Math.round(vv.offsetTop)+'px');r.setProperty('--vvb',Math.round(window.innerHeight-vv.offsetTop-vv.height)+'px')}
+    else{r.removeProperty('--vvt');r.removeProperty('--vvb')}};
   if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}fit();
   const typing=t=>!!t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
   document.addEventListener('focusin',e=>{if(typing(e.target))document.body.classList.add('kb')});
@@ -38,6 +40,7 @@ const E=(sess,it,date=curDate())=>{if(!it.alt)return it;const id=Store.pickGet(d
   return a&&EX[id]?Object.assign({},it,a,{alt:it.alt,base:it.ex}):it};
 const stationDone=(sess,i,date=curDate())=>sess.stations[i].every(it=>setsDone(sess,it,date)>=E(sess,it,date).sets);
 function setsDone(sess,it,date){return Store.get(date,sess.id,E(sess,it,date).ex).filter(s=>s&&s.done).length}
+const fmtMS=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 const first=r=>(String(r).match(/\d+/)||[''])[0];
 
 /* ---------- programme : semaine, semaine allégée, mesures ---------- */
@@ -181,9 +184,11 @@ function viewStation(sess,si){
     sets+=`<div class="${cls}"><span class="n">${k+1}</span>`+
      (kind==='tick'?`<span>${esc(it.reps)}</span>`:
       `<div><label for="r${k}">${kind==='time'?'Durée (s)':'Reps'}</label><input id="r${k}" inputmode="numeric" pattern="[0-9]*" value="${esc(r)}" placeholder="${ps&&ps.reps!=null?ps.reps:first(it.reps)}" data-act="inp"></div>`+
-      (kind==='reps'||kind==='time'?`<div class="mute small">${it.side?'':''}</div>`:`<div><label for="w${k}">${kind==='assist'?'Assist. kg':'kg'}</label><input id="w${k}" inputmode="decimal" value="${esc(w)}" placeholder="${ps&&ps.kg!=null?esc(ps.kg):'kg'}" data-act="inp"></div>`))+
+      (kind==='time'?`<button class="go" data-act="cd" data-k="${k}" aria-label="Lancer le minuteur de la série ${k+1}">▶</button>`:kind==='reps'?`<div class="mute small"></div>`:`<div><label for="w${k}">${kind==='assist'?'Assist. kg':'kg'}</label><input id="w${k}" inputmode="decimal" value="${esc(w)}" placeholder="${ps&&ps.kg!=null?esc(ps.kg):'kg'}" data-act="inp"></div>`))+
      `<button class="ok" data-act="tick" data-k="${k}" aria-pressed="${!!s.done}" aria-label="Série ${k+1} faite">✓</button></div>`;
   }
+  const mm=kind==='tick'&&String(it.reps).match(/^(\d+(?:[.,]\d+)?)\s*min/),dsec=mm?(Store.durGet(it.ex)||Math.round(parseFloat(mm[1].replace(',','.'))*60)):0;
+  const durCard=mm?`<div class="durcard"><span class="mute">Minuteur</span><button class="btn sm" data-act="cdm" data-d="-30" aria-label="30 secondes de moins">−30 s</button><b>${fmtMS(dsec)}</b><button class="btn sm" data-act="cdm" data-d="30" aria-label="30 secondes de plus">+30 s</button><button class="shold dgo" data-act="cdc">▶ Lancer</button></div>`:'';
   const lastTxt=prev?`Dernière fois (${fmtDate(prev.date)}) : `+prev.sets.map(s=>(s.reps!=null?s.reps:'')+(s.kg!=null&&s.kg!==''?'×'+s.kg+' kg':'')).join(' · '):'Première fois : note tes charges de départ.';
   const vid=Store.videoId(it.ex),vok=/^[A-Za-z0-9_-]{11}$/.test(vid);
   const video=!vok?`<div class="novid"><span>Pas de vidéo par défaut.</span><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Chercher une démo ↗</a></div>`:S.vid&&vok?`<iframe src="https://www.youtube-nocookie.com/embed/${vid}?playsinline=1&rel=0&autoplay=1" title="${esc(ex.en)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
@@ -201,7 +206,7 @@ function viewStation(sess,si){
    <div class="prog">${prog}</div>${ssBar}${tabs}
    <div class="name-en">${esc(ex.en)}</div><div class="name-fr">${esc(ex.fr)}</div>${chips}
    <div class="target"><span class="mute">Objectif</span><b>${kind==='tick'&&it.sets===1?esc(it.reps):it.sets+' × '+esc(it.reps)}</b></div>
-   <div class="sets">${sets}</div><div class="last">${esc(lastTxt)}</div>
+   ${durCard}<div class="sets">${sets}</div><div class="last">${esc(lastTxt)}</div>
    <div class="navbtns"><button class="btn big" data-act="prev"${si===0?' disabled':''}>‹ Préc.</button><button class="btn big primary${firstOpen<0?' ready':''}" data-act="next">${last?'Terminer ✓':'Station suivante ›'}</button></div>
    ${it.note?`<div class="note">${esc(it.note)}</div>`:''}${ex.note?`<div class="note">${esc(ex.note)}</div>`:''}
    ${vidFold}${noteFold}
@@ -214,8 +219,9 @@ function viewStretch(sess,si){
   const prog=sess.stations.map((_,i)=>`<i class="${stationDone(sess,i)?'on':''}"></i>`).join('')+`<i class="cur"></i>`;
   const tiles=ids.map((id,k)=>{const t=STRETCH[id],d=done.includes(id);
     return `<article class="stile${d?' done':''}" style="--c:${t.c}"><span class="sn">${k+1}</span>
-     <button class="sck" data-act="stk" data-id="${id}" aria-pressed="${d}" aria-label="${esc(t.fr)} : fait"></button>
-     <div class="sfig">${t.svg}</div><div class="sname">${esc(t.fr)}</div><div class="sen">${esc(t.en)}</div>
+     <button class="sck" data-act="stk" data-id="${id}" aria-pressed="${d}" aria-label="${esc(t.en)} : fait"></button>
+     <div class="simg"><img src="img/stretch/${id}-0.jpg" alt="${esc(t.en)}, début" loading="lazy"><img src="img/stretch/${id}-1.jpg" alt="" loading="lazy"></div>
+     <div class="sname">${esc(t.en)}</div><div class="sfr">${esc(t.fr)}</div>
      <div><span class="zone">${esc(t.zone)}</span></div>
      <button class="shold" data-act="sth" data-id="${id}" aria-label="Lancer le minuteur de ${t.t} secondes">▶ ${t.t} s<small>${esc(t.side||'')}</small></button>
      <p class="scue">${esc(t.cue)}</p></article>`}).join('');
@@ -223,7 +229,7 @@ function viewStretch(sess,si){
   return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">Étirements</span></div>${editBar}
    <div class="prog">${prog}</div>
    <h1>Étirements</h1><div class="mute">${ids.length} étirements · environ ${strMin(sess)} min. Tiens chaque position, respire, sans douleur. Le bouton noir lance le minuteur.</div>
-   <div class="sgrid">${tiles}</div>
+   <div class="sgrid">${tiles}</div><p class="mute small">Photos : Free Exercise DB (domaine public). Les deux images alternent : début et fin du mouvement.</p>
    <div class="navbtns"><button class="btn big" data-act="prev">‹ Préc.</button><button class="btn big primary${all?' ready':''}" data-act="next">Terminer ✓</button></div>`;
 }
 function onTick(k){
@@ -242,7 +248,7 @@ function onTick(k){
 function goStation(i){S.st=i;S.exi=0;S.vid=false;S.open.vid=S.open.notes=false;toTop();wake();render()}
 
 /* ---------- minuteur de repos (basé sur l’heure de fin, survit à la mise en veille) ---------- */
-let T=null,tick=null,actx=null,aud=null,audOk=false,wavUrl=null,sndErr='';
+let T=null,tick=null,tmo=null,actx=null,aud=null,audOk=false,wavUrl=null,sndErr='';
 /* Bip de fin de repos. Deux modes (Réglages) :
    - prioritaire (défaut) : élément <audio> (canal « lecture » d’iOS : audible même en mode silencieux ; peut mettre la musique en pause un instant) ;
    - mélangé : Web Audio en session « ambient » (ne coupe pas la musique, mais muet en mode silencieux).
@@ -268,27 +274,34 @@ function beepPrime(){/* à appeler depuis un geste de l’utilisateur */
       else{aud=a;audOk=true}}
     else audSession('ambient');
     const c=getCtx();if(c.state!=='running')c.resume()}catch(e){sndErr=String(e&&e.message||e)}}
-function webBeep(type){try{audSession(type);const c=getCtx();if(c.state!=='running')c.resume();
-  [0,.25,.5].forEach(o=>{const os=c.createOscillator(),g=c.createGain();os.type='triangle';os.frequency.value=o===.5?1100:880;g.gain.value=.7;os.connect(g);g.connect(c.destination);os.start(c.currentTime+o);os.stop(c.currentTime+o+.15)})}catch(e){sndErr=String(e&&e.message||e)}}
-function beep(test){
+function webBeep(type,due){try{audSession(type);const c=getCtx();
+  const go=()=>{if(due&&Date.now()-due>LATE)return;if(c.state!=='running'){sndErr='Web Audio '+c.state;return}
+    [0,.25,.5].forEach(o=>{const os=c.createOscillator(),g=c.createGain();os.type='triangle';os.frequency.value=o===.5?1100:880;g.gain.value=.7;os.connect(g);g.connect(c.destination);os.start(c.currentTime+o);os.stop(c.currentTime+o+.15)})};
+  if(c.state==='running')go();else{const p=c.resume();if(p&&p.then)p.then(go,e=>{sndErr=String(e&&e.name||e)});else go()}}catch(e){sndErr=String(e&&e.message||e)}}
+function beep(test,due){
   if(!test&&!Store.d.settings.sound)return;
+  const fresh=()=>test||!due||Date.now()-due<=LATE;
   if(sndMode()==='priority'){audSession('playback');
-    const fallback=e=>{sndErr=String(e&&e.name||e);audOk=false;aud=null;webBeep('playback')};
+    const fallback=e=>{sndErr=String(e&&e.name||e);audOk=false;aud=null;if(fresh())webBeep('playback',due)};
     try{const a=aud||newAud();a.muted=false;a.currentTime=0;const p=a.play();
-      if(p&&p.then)p.then(()=>{audOk=true;aud=a;sndErr=''}).catch(fallback)}catch(e){fallback(e)}}
-  else webBeep('ambient');
+      if(p&&p.then)p.then(()=>{audOk=true;aud=a;sndErr='';if(!fresh())a.pause()}).catch(fallback)}catch(e){fallback(e)}}
+  else webBeep('ambient',due);
   try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}
 function sndStatus(){return 'Mode '+sndMode()+' · session '+sessType()+' · audio '+(audOk?'prêt':'non amorcé')+' · Web Audio '+(actx?actx.state:'—')+(sndErr?' · erreur : '+sndErr:'')}
-function startTimer(sec,label,hold){T={end:Date.now()+sec*1000,label,hold:!!hold,fired:false};clearInterval(tick);tick=setInterval(drawTimer,250);drawTimer()}
-function stopTimer(){T=null;clearInterval(tick);$('#timer').hidden=true;$('#timer').className='timer'}
+const TLBL={rest:['Repos','Repos terminé'],hold:['Tiens','Terminé'],cd:['Minuteur','Terminé']};
+function armTimer(){clearTimeout(tmo);if(T&&!T.fired)tmo=setTimeout(drawTimer,Math.max(0,T.end-Date.now())+15)}
+function startTimer(sec,label,mode){mode=mode===true?'hold':(mode||'rest');T={end:Date.now()+sec*1000,label,mode,fired:false};clearInterval(tick);tick=setInterval(drawTimer,250);armTimer();drawTimer()}
+function stopTimer(){T=null;clearInterval(tick);clearTimeout(tmo);$('#timer').hidden=true;$('#timer').className='timer'}
+/* Le bip n’est jamais joué en retard : s’il n’a pas pu partir à l’heure (iOS suspend la page quand l’écran se verrouille ou qu’une autre app passe devant), on affiche « terminé » sans son. */
+const LATE=2500;
 function drawTimer(){
   const el=$('#timer');document.body.classList.toggle('hastimer',!!T);if(!T){el.hidden=true;return}
-  const left=Math.ceil((T.end-Date.now())/1000);
-  if(left<=0&&!T.fired){T.fired=true;beep()}
-  const m=Math.floor(Math.max(left,0)/60),s=Math.max(left,0)%60,over=left<=0;
+  const now=Date.now(),left=Math.ceil((T.end-now)/1000),over=left<=0;
+  if(over&&!T.fired){T.fired=true;if(now-T.end<=LATE)beep(false,T.end)}
+  const m=Math.floor(Math.max(left,0)/60),s=Math.max(left,0)%60,L=TLBL[T.mode]||TLBL.rest;
   el.hidden=false;el.className='timer'+(over?' end':'');
-  el.innerHTML=`<div><span class="t" aria-live="off">${m}:${String(s).padStart(2,'0')}</span><span class="lbl">${over?(T.hold?'Terminé':'Repos terminé'):(T.hold?'Tiens':'Repos')}${T.label?'<b>'+esc(T.label)+'</b>':''}</span>`+
-   (over||T.hold?'':`<button data-act="tm" data-d="-15">−15</button><button data-act="tm" data-d="15">+15</button>`)+`<button data-act="tmstop">${over?'OK':'Passer'}</button></div>`;
+  el.innerHTML=`<div><span class="t" aria-live="off">${m}:${String(s).padStart(2,'0')}</span><span class="lbl">${over?L[1]:L[0]}${T.label?'<b>'+esc(T.label)+'</b>':''}</span>`+
+   (over?'':`<button data-act="tm" data-d="-15">−15</button><button data-act="tm" data-d="15">+15</button>`)+`<button data-act="tmstop">${over?'OK':'Passer'}</button></div>`;
 }
 /* ---------- écran allumé ---------- */
 let lock=null;
@@ -325,9 +338,13 @@ function onAct(e){
   else if(a==='tick')onTick(+b.dataset.k);
   else if(a==='prev'&&S.st>0)goStation(S.st-1);
   else if(a==='next'){if(S.st<nSt(sess)-1)goStation(S.st+1);else{S.st=null;toTop();render();toast('Séance terminée. Bien joué.')}}
+  else if(a==='cd'||a==='cdm'||a==='cdc'){const st=sess.stations[S.st],it=E(sess,st[S.exi],curDate()),ex=EX[it.ex];
+    if(a==='cd'){const r=$('#r'+b.dataset.k),sec=Math.round(num(r&&r.value)??num(r&&r.placeholder)??45);beepPrime();startTimer(Math.max(5,sec),ex.en+' · série '+(+b.dataset.k+1),'hold')}
+    else{const mm=String(it.reps).match(/^(\d+(?:[.,]\d+)?)\s*min/),cur=Store.durGet(it.ex)||Math.round(parseFloat((mm?mm[1]:'1').replace(',','.'))*60);
+      if(a==='cdm'){Store.durSet(it.ex,Math.max(30,cur+ +b.dataset.d));render()}else{beepPrime();startTimer(cur,ex.en,'cd')}}}
   else if(a==='stk'){Store.strToggle(curDate(),sess.id,b.dataset.id);render()}
-  else if(a==='sth'){const t=STRETCH[b.dataset.id];beepPrime();startTimer(t.t,t.fr,true)}
-  else if(a==='tm'&&T){T.end+=+b.dataset.d*1000;T.fired=false;drawTimer()}
+  else if(a==='sth'){const t=STRETCH[b.dataset.id];beepPrime();startTimer(t.t,t.en,'hold')}
+  else if(a==='tm'&&T){T.end+=+b.dataset.d*1000;T.fired=false;armTimer();drawTimer()}
   else if(a==='tmstop')stopTimer();
   else if(a==='guide'){S.guide=b.dataset.id;render()}
   else if(window.onViewAct)window.onViewAct(a,b,e);

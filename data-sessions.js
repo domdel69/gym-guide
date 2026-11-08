@@ -65,37 +65,20 @@ window.SESSIONS=[
 
 /* Guides : un onglet par entrée. Pour en ajouter un, ajoute un objet ici. */
 
-/* Étirements de fin de séance (5 au maximum par séance). Illustrations : pictogrammes SVG ; la zone orange = muscle étiré, la flèche = mouvement.
-   t = durée de maintien en secondes ; side = « / côté » ou « / jambe » quand il faut refaire de l’autre côté. Pas d’étirement des mollets. */
-(()=>{
-const P=(pts,w=9,c='var(--fig)')=>`<polyline points="${pts.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
-const HD=(x,y)=>`<circle cx="${x}" cy="${y}" r="8.5" fill="var(--skin)"/>`;
-const GL=(x,y,r=15)=>`<circle class="glow" cx="${x}" cy="${y}" r="${r}"/>`;
-const AR=(x1,y1,x2,y2)=>{const a=Math.atan2(y2-y1,x2-x1),h=8,l=[x2-h*Math.cos(a-.5),y2-h*Math.sin(a-.5)],r=[x2-h*Math.cos(a+.5),y2-h*Math.sin(a+.5)];
-  return `<g class="arr"><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><polyline points="${l.map(n=>n.toFixed(1))} ${x2},${y2} ${r.map(n=>n.toFixed(1))}"/></g>`};
-const FL=y=>`<line class="floor" x1="12" y1="${y}" x2="148" y2="${y}"/>`;
-const L='var(--leg)',F2='var(--fig2)';
-const svg=b=>`<svg viewBox="0 0 160 120" role="img" aria-hidden="true">${b}</svg>`;
-const legs=(x=80,y=76)=>P([[x,y],[x-9,108]],9,L)+P([[x,y],[x+9,108]],9,L);
+/* Étirements de fin de séance (5 au maximum par séance). Photos : Free Exercise DB (domaine public), voir img/README.md ; img/stretch/<id>-0.jpg et -1.jpg = début et fin du mouvement.
+   en = nom anglais (affiché en premier), fr = nom français ; t = durée de maintien en secondes ; side = « / côté » ou « / jambe » quand il faut refaire de l’autre côté.
+   Pas d’étirement des mollets. */
 window.STRETCH={
- chest:{fr:'Pectoraux au cadre de porte',en:'Doorway chest stretch',zone:'Pectoraux',c:'#f97316',t:30,side:'',cue:'Avant-bras sur le cadre, avance le buste.',
-  svg:svg(FL(113)+'<rect class="prop" x="44" y="6" width="8" height="107" rx="3"/><rect class="prop" x="108" y="6" width="8" height="107" rx="3"/>'+GL(80,54,17)+legs()+P([[80,44],[80,78]],13)+P([[72,47],[58,47],[57,24]],8)+P([[88,47],[102,47],[103,24]],8)+HD(80,31))},
- shoulder:{fr:'Épaule bras croisé',en:'Cross-body shoulder stretch',zone:'Arrière d’épaule',c:'#a855f7',t:20,side:' / côté',cue:'Bras tendu devant la poitrine, tire doucement.',
-  svg:svg(FL(113)+GL(86,49,14)+legs()+P([[80,44],[80,78]],13)+P([[89,48],[52,53]],8)+HD(80,31)+P([[72,47],[69,68],[60,56]],8,F2)+AR(40,66,52,60))},
- child:{fr:'Posture de l’enfant',en:'Child’s pose',zone:'Dos, grand dorsal',c:'#3b82f6',t:30,side:'',cue:'Assieds-toi sur les talons, bras loin devant.',
-  svg:svg(FL(110)+GL(84,84,17)+P([[38,104],[92,104]],9,L)+P([[58,88],[92,104]],10,L)+P([[104,94],[148,105]],8,F2)+P([[58,88],[104,91]],13)+HD(116,96)+AR(66,66,46,74))},
- side:{fr:'Étirement latéral du dos',en:'Overhead side reach',zone:'Dorsal, flancs',c:'#0ea5e9',t:20,side:' / côté',cue:'Un bras au-dessus de la tête, penche-toi.',
-  svg:svg(FL(113)+GL(84,62,15)+P([[82,78],[70,108]],9,L)+P([[82,78],[94,108]],9,L)+P([[82,78],[74,46]],13)+P([[69,50],[63,72]],8,F2)+HD(67,34)+P([[80,48],[82,19],[52,14]],8)+AR(108,46,94,46))},
- sphinx:{fr:'Le sphinx',en:'Sphinx stretch',zone:'Abdominaux',c:'#ec4899',t:20,side:'',cue:'Sur les avant-bras, pousse le buste, bassin au sol.',
-  svg:svg(FL(110)+GL(84,88,14)+P([[22,104],[64,100]],9,L)+P([[64,98],[102,76]],13)+P([[102,80],[102,103],[132,104]],8,F2)+HD(112,62)+AR(136,92,136,70))},
- hams:{fr:'Arrière de cuisse couché',en:'Lying hamstring stretch',zone:'Ischio-jambiers',c:'#16a34a',t:30,side:' / jambe',cue:'Mains derrière la cuisse, pied détendu.',
-  svg:svg(FL(107)+GL(73,76,14)+P([[74,98],[126,99]],9,L)+P([[32,98],[74,98]],12)+HD(18,96)+P([[74,96],[70,66],[62,32]],9,L)+P([[34,96],[50,72],[70,70]],8,F2)+AR(86,44,74,34))},
- kneechest:{fr:'Genou à la poitrine',en:'Knee to chest',zone:'Fessiers, bas du dos',c:'#e11d48',t:20,side:' / côté',cue:'Ramène un genou vers toi, l’autre jambe allongée.',
-  svg:svg(FL(107)+GL(78,90,14)+P([[74,98],[126,99]],9,L)+P([[32,98],[74,98]],12)+HD(18,96)+P([[74,95],[56,68],[80,80]],9,L)+P([[34,96],[46,76],[64,74]],8,F2)+AR(66,58,50,60))}
+ chest:{en:'Chest opener',fr:'Ouverture des pectoraux',zone:'Pectoraux',c:'#f97316',t:30,side:'',cue:'Mains dans le bas du dos, coudes vers l’arrière.'},
+ shoulder:{en:'Cross-body shoulder stretch',fr:'Épaule, bras croisé',zone:'Épaule',c:'#a855f7',t:20,side:' / côté',cue:'Bras tendu devant la poitrine, tire doucement.'},
+ child:{en:'Child’s pose',fr:'Posture de l’enfant',zone:'Dos',c:'#3b82f6',t:30,side:'',cue:'Assieds-toi sur les talons, bras loin devant.'},
+ side:{en:'Standing side bend',fr:'Inclinaison latérale',zone:'Flancs, dorsal',c:'#0ea5e9',t:20,side:' / côté',cue:'Un bras au-dessus de la tête, penche-toi.'},
+ reach:{en:'Overhead reach',fr:'Grandissement bras en l’air',zone:'Abdominaux',c:'#ec4899',t:20,side:'',cue:'Bras tendus au-dessus de la tête, grandis-toi.'},
+ hams:{en:'Lying hamstring stretch',fr:'Ischio-jambiers allongé',zone:'Ischio-jambiers',c:'#16a34a',t:30,side:' / jambe',cue:'Jambe vers le plafond, mains derrière la cuisse.'},
+ kneechest:{en:'Knee to chest',fr:'Genou à la poitrine',zone:'Fessiers, bas du dos',c:'#e11d48',t:20,side:' / côté',cue:'Ramène un genou vers toi, l’autre jambe allongée.'}
 };
-const STR={a:['chest','hams','kneechest','child','sphinx'],b:['chest','side','shoulder','hams','child'],c:['chest','child','hams','kneechest','sphinx'],home:['chest','shoulder','child']};
+const STR={a:['chest','hams','kneechest','child','reach'],b:['chest','side','shoulder','hams','child'],c:['chest','child','hams','kneechest','reach'],home:['chest','shoulder','child']};
 window.SESSIONS.forEach(x=>{x.stretch=STR[x.id]||[]});
-})();
 
 window.GUIDES=[
 {id:'nutrition',tab:'Nutrition',title:'Nutrition',

@@ -98,6 +98,9 @@ const Store=(()=>{
   const noteGet=id=>(d.notes||{})[id]||'';
   const noteSet=(id,text)=>{d.notes=d.notes||{};if((text||'').trim())d.notes[id]=text;else delete d.notes[id];save()};
   const resetSession=(date,sid)=>{stash('avant nouvelle séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}if(d.str&&d.str[date])delete d.str[date][sid];delete d.meta.sess[date+'|'+sid];save()};
+  /* Durée choisie pour le minuteur d’un exercice chronométré (secondes, sur ce téléphone). */
+  const durGet=id=>((d.settings.dur)||{})[id]||0;
+  const durSet=(id,sec)=>{d.settings.dur=d.settings.dur||{};d.settings.dur[id]=sec;save()};
   /* Étirements faits (addition au format : d.str[date][séance] = [identifiants]). */
   const strGet=(date,sid)=>((d.str||{})[date]||{})[sid]||[];
   const strToggle=(date,sid,id)=>{d.str=d.str||{};const D=(d.str[date]=d.str[date]||{}),a=(D[sid]=D[sid]||[]),i=a.indexOf(id);
@@ -115,7 +118,7 @@ const Store=(()=>{
     stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
 
   const deleteSession=(date,sid)=>{stash('avant suppression de séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}if(d.str&&d.str[date])delete d.str[date][sid];delete d.meta.sess[date+'|'+sid];save()};
-  return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,strGet,strToggle,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,deleteSession,
+  return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,strGet,strToggle,durGet,durSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,deleteSession,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
       stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},

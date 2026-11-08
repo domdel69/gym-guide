@@ -9,6 +9,7 @@ dst=f"{root}/releases/{ver}"
 FILES=['index.html','styles.css','data-ex.js','data-sessions.js','version.js','store.js','app.js','views.js']
 shutil.rmtree(dst,ignore_errors=True);os.makedirs(dst)
 for f in FILES:shutil.copy(f"{src}/{f}",f"{dst}/{f}")
+if os.path.isdir(f"{src}/img"):shutil.copytree(f"{src}/img",f"{dst}/img")  # stretch photos
 h=open(f"{dst}/index.html",encoding='utf-8').read()
 h=h.replace('href="manifest.webmanifest"','href="../../manifest.webmanifest"').replace('href="icons/','href="../../icons/')
 h=h.replace('<script src="data-ex.js">','<script src="../archive-banner.js"></script>\n<script src="data-ex.js">',1)
