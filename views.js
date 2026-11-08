@@ -206,8 +206,8 @@ async function exportBackup(){
 }
 window.onViewAct=async(a,b)=>{
   if(a==='pmode'){S.prog.mode=b.dataset.m;S.prog.ex=null;render()}
-  else if(a==='exdetail'){S.tab='progress';S.prog.ex=b.dataset.ex;persist();scrollTo(0,0);render()}
-  else if(a==='pback'){S.prog.ex=null;scrollTo(0,0);render()}
+  else if(a==='exdetail'){S.tab='progress';S.prog.ex=b.dataset.ex;persist();toTop();render()}
+  else if(a==='pback'){S.prog.ex=null;toTop();render()}
   else if(a==='undo'){if(confirm('Restaurer l’état conservé ? L’état actuel sera conservé à sa place.')){try{Store.undo();toast('État restauré');render()}catch(e){toast('Rien à restaurer')}}}
   else if(a==='startnow'){Store.d.settings.start=Store.today();Store.save();toast('Départ : aujourd’hui');render()}
   else if(a==='startclear'){Store.d.settings.start=null;Store.save();toast('Date effacée');render()}

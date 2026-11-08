@@ -4,6 +4,8 @@ Personal gym programme web app (PWA, French UI). Hosted on GitHub Pages, logs st
 
 ## Files
 - `data-ex.js`, `data-sessions.js`: all content (exercises, sessions, guides). Edit these to change the plan.
+- Stretches (0.25): `window.STRETCH` in `data-sessions.js` (SVG pictograms, hold time, muscle zone); each session lists up to 5 ids in `stretch`. They form a last virtual station (index = number of stations) shown as tiles; ticks are stored in `d.str[date][session]`. Not in the Suivi, not in `EX`.
+- Layout (0.25): the page never scrolls (`body` fixed, sized to the visual viewport); `#app` is the scroller; the rest timer and the tab bar are normal flex children, so nothing is `position:fixed`.
 - `app.js`, `views.js`, `store.js`, `styles.css`: app code. `sw.js`: offline cache.
 - `version.js`: `APP_VERSION` and `RELEASES` (archived versions). `VERSION` in `sw.js`: bump both on each release (0.1, 0.2, ...).
 - `tools/make_pdfs.py`: regenerates `print/*.pdf` from the data files (needs node, playwright).
@@ -43,6 +45,7 @@ Suivi excludes warm-up stations (items with `warm:true` in the sessions, placed 
 | 0.21 | 4c18208 | `releases/0.21/` |
 | 0.22 | 2c55895 | `releases/0.22/` |
 | 0.24 | 3e3214e | `releases/0.24/` |
+| 0.25 | (see git log) | `releases/0.25/` |
 | 0.23 | 324130e | `releases/0.23/` |
 | 0.19 | da7c820 | `releases/0.19/` |
 | 0.18 | 14d8368 | `releases/0.18/` |

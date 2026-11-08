@@ -10,7 +10,19 @@ const PB=location.pathname.includes('/releases/')?'../../print/':'print/';
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
 const persist=()=>{const u=(Store.d.ui=Store.d.ui||{});u.tab=S.tab;delete u.sess;Store.save()};
 const sessOf=id=>SESSIONS.find(s=>s.id===id)||SESSIONS[0];
+const toTop=()=>{const a=document.getElementById('app');if(a)a.scrollTop=0};
 const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)};
+
+/* Zone visible (iOS laisse parfois la page décalée après le clavier ou un défilement) : le corps suit la zone visible, la barre d’onglets se masque pendant la saisie. */
+(()=>{const vv=window.visualViewport,r=document.documentElement.style;
+  const fit=()=>{if(!vv||vv.scale>1.01)return;r.setProperty('--vvh',Math.round(vv.height)+'px');r.setProperty('--vvt',Math.round(vv.offsetTop)+'px')};
+  if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}fit();
+  const typing=t=>!!t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+  document.addEventListener('focusin',e=>{if(typing(e.target))document.body.classList.add('kb')});
+  document.addEventListener('focusout',e=>{if(typing(e.target))setTimeout(()=>{if(!typing(document.activeElement)){document.body.classList.remove('kb');window.scrollTo(0,0);fit()}},150)});
+  window.addEventListener('pageshow',fit);window.addEventListener('orientationchange',()=>setTimeout(fit,300));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){window.scrollTo(0,0);fit()}});
+})();
 
 const ICONS={
  train:'<path d="M3 11l9-8 9 8M5 9.5V20h5v-6h4v6h5V9.5"/>',
@@ -66,6 +78,9 @@ function checkCard(){
 const SLET={a:'A',b:'B',c:'C',home:'M'};
 const mondayOf=d=>addDays(d,-((new Date(D0(d)*864e5).getUTCDay()+6)%7));
 const GYM=['a','b','c'];
+/* Séances salle faites dans chacune des 12 semaines du programme (semaine 1 = date de départ). */
+function progWeeks(){const st=Store.d.settings.start;if(!st)return[];
+  return Array.from({length:12},(_,i)=>{let n=0;for(let k=0;k<7;k++){const dt=addDays(st,7*i+k);n+=GYM.filter(g=>Store.countDone(dt,g)>0).length}return n})}
 function weekMap(){const mo=mondayOf(Store.today()),days=[];
   for(let i=0;i<7;i++){const dt=addDays(mo,i);days.push({dt,sids:SESSIONS.map(x=>x.id).filter(id=>Store.countDone(dt,id)>0)})}
   return days}
@@ -88,7 +103,8 @@ function viewHome(){
   const all=days.flatMap(d=>d.sids),ng=all.filter(i=>GYM.includes(i)).length,nh=all.filter(i=>i==='home').length;
   const sess=sessOf(sg.sid);
   const kick=inProg?`Semaine ${x.w} / 12 · Bloc ${p.blk} · ${p.name}`:fmtDay(td);
-  const bar=inProg?`<span class="prog wk" aria-hidden="true">${Array.from({length:12},(_,i)=>`<i class="${i+1<x.w?'on':''}${i+1===x.w?' cur':''}${i+1===6||i+1===12?' dl':''}"></i>`).join('')}</span>`:'';
+  const pw=inProg?progWeeks():[],wn=inProg?pw[x.w-1]:0;
+  const bar=inProg?`<span class="prog wk" aria-hidden="true">${pw.map((n,i)=>`<i class="${n>=2?'full':n===1?'half':''}${i+1===x.w?' cur':''}${i+1===6||i+1===12?' dl':''}"></i>`).join('')}</span><span class="hero-wk">Semaine ${x.w} du programme : ${Math.min(wn,2)}/2 séances salle</span>`:'';
   const hero=`<button class="hero${sg.done?' done':''}" data-act="sess" data-id="${sg.sid}"><span class="hero-k">${esc(kick)}</span>
    <b class="hero-t">${sg.done?esc(sess.title)+' faite ✓':esc(sess.title)}</b>
    <span class="hero-s">${esc(sess.dur)} · ${esc(sess.focus)}</span>
@@ -117,6 +133,10 @@ function viewChoice(sess){
    ${items?'<p class="mute small">Glisse une séance vers la droite pour la supprimer.</p>':''}
    ${items?`<div class="list">${items}</div>`:'<p class="mute small">Aucune séance enregistrée pour l’instant.</p>'}`;
 }
+const hasStr=sess=>!!(sess.stretch&&sess.stretch.length);
+const nSt=sess=>sess.stations.length+(hasStr(sess)?1:0);
+const strAllDone=(sess,date)=>hasStr(sess)&&sess.stretch.every(id=>Store.strGet(date,sess.id).includes(id));
+const strMin=sess=>Math.max(1,Math.round(sess.stretch.reduce((n,id)=>n+STRETCH[id].t*(STRETCH[id].side?2:1)+10,0)/60));
 const isWarm=(sess,i)=>!!sess.stations[i][0].warm;
 function stLabel(sess,i){let n=0,w=0;for(let k=0;k<=i;k++){if(isWarm(sess,k))w++;else n++}
   const tw=sess.stations.filter((_,k)=>isWarm(sess,k)).length,tn=sess.stations.length-tw;
@@ -128,6 +148,8 @@ function viewTrain(){
   if(S.st!==null)return viewStation(sess,S.st);
   const done=sess.stations.filter((_,i)=>stationDone(sess,i)).length;
   const hasWarm=sess.stations.some((_,i)=>isWarm(sess,i));
+  const strRow=hasStr(sess)?(()=>{const sd=strAllDone(sess,curDate()),ids=sess.stretch;
+    return `<h2>Étirements · ${strMin(sess)} min</h2><button class="row${sd?' done':''}" data-act="open" data-i="${sess.stations.length}"><span class="num">${sd?'✓':'🧘'}</span><span class="t"><b>Étirements</b><span>${ids.map(id=>esc(STRETCH[id].fr)).join(' · ')}</span></span><span class="sr">${ids.length}</span></button>`})():'';
   const rows=sess.stations.map((st,i)=>{
     const d=stationDone(sess,i),head=hasWarm&&(i===0||isWarm(sess,i-1)!==isWarm(sess,i))?`<h2>${isWarm(sess,i)?'Échauffement · 6 min':'Séance'}</h2>`:'';
     return head+`<button class="row${d?' done':''}" data-act="open" data-i="${i}"><span class="num">${d?'✓':stLabel(sess,i).n}</span><span class="t">${st.length>1?'<span class="ss">Superset</span>':''}`+
@@ -140,12 +162,13 @@ function viewTrain(){
    ${sessBanner(curDate())}
    <p class="mute small" style="margin-top:10px">${esc(sess.intro)}</p>
    <div class="small mute">${edit?fmtDate(S.date):'Aujourd’hui'} : ${done}/${sess.stations.length} stations faites</div>
-   <div class="list">${rows}</div>`;
+   <div class="list">${rows}${strRow}</div>`;
 }
 
 function viewStation(sess,si){
+  if(hasStr(sess)&&si>=sess.stations.length)return viewStretch(sess,si);
   const st=sess.stations[si],raw=st[Math.min(S.exi,st.length-1)],date=curDate(),it=E(sess,raw,date),ex=EX[it.ex];
-  const prog=sess.stations.map((_,i)=>`<i class="${stationDone(sess,i)?'on':''}${i===si?' cur':''}"></i>`).join('');
+  const prog=sess.stations.map((_,i)=>`<i class="${stationDone(sess,i)?'on':''}${i===si?' cur':''}"></i>`).join('')+(hasStr(sess)?`<i class="${strAllDone(sess,date)?'on':''}"></i>`:'');
   const ssBar=st.length>1?`<div class="ss-bar"><span class="ss">Superset</span><span class="mute small">alterne les deux exercices</span></div>`:'';
   const tabs=st.length>1?`<div class="ex-tabs">`+st.map((x,k)=>`<button data-act="ex" data-k="${k}" aria-selected="${k===S.exi}">${esc(EX[E(sess,x,date).ex].en)}<small>${setsDone(sess,x,date)}/${E(sess,x,date).sets} séries</small></button>`).join('')+`</div>`:'';
   const prev=Store.last(it.ex,date),logged=Store.get(date,sess.id,it.ex);
@@ -169,10 +192,10 @@ function viewStation(sess,si){
   const note=Store.noteGet(it.ex);
   const vidFold=`<details class="card fold" data-k="vid"${S.open.vid?' open':''}><summary><h3>Vidéo</h3></summary><div class="fold-b"><div class="video">${video}</div>
    <div class="vlinks">${vok?`<a href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">Ouvrir sur YouTube ↗</a>`:'<span></span>'}<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.en+' form')}" target="_blank" rel="noopener">Autres démos ↗</a></div></div></details>`;
-  const noteFold=`<details class="card fold" data-k="notes"${S.open.notes?' open':''}><summary><h3>Notes</h3>${note?'<span class="sr small">écrite</span>':''}</summary><div class="fold-b">
+  const noteFold=`<details class="card fold" data-k="notes"${S.open.notes?' open':''}><summary><h3>Notes</h3>${note?`<span class="npv">${esc(note.split(/\n+/).map(x=>x.trim()).filter(Boolean).join(' · '))}</span>`:''}</summary><div class="fold-b">
    <textarea id="exnote" data-ex="${esc(it.ex)}" rows="3" placeholder="Réglage de la machine, sensations, rappel…" aria-label="Notes sur ${esc(ex.en)}">${esc(note)}</textarea>
    <p class="mute small">Valable pour cet exercice dans toutes les séances. Reste sur ce téléphone.</p></div></details>`;
-  const last=si===sess.stations.length-1;
+  const last=si===nSt(sess)-1;
   const editBar=date!==Store.today()?`<div class="note editing">Modification de la séance du <b>${fmtDay(date)}</b></div>`:'';
   return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">${stLabel(sess,si).txt}</span></div>${editBar}
    <div class="prog">${prog}</div>${ssBar}${tabs}
@@ -186,6 +209,23 @@ function viewStation(sess,si){
    <div class="avoid"><b>À éviter :</b> ${esc(ex.avoid)}</div>`;
 }
 
+function viewStretch(sess,si){
+  const date=curDate(),ids=sess.stretch,done=Store.strGet(date,sess.id),all=strAllDone(sess,date);
+  const prog=sess.stations.map((_,i)=>`<i class="${stationDone(sess,i)?'on':''}"></i>`).join('')+`<i class="cur"></i>`;
+  const tiles=ids.map((id,k)=>{const t=STRETCH[id],d=done.includes(id);
+    return `<article class="stile${d?' done':''}" style="--c:${t.c}"><span class="sn">${k+1}</span>
+     <button class="sck" data-act="stk" data-id="${id}" aria-pressed="${d}" aria-label="${esc(t.fr)} : fait"></button>
+     <div class="sfig">${t.svg}</div><div class="sname">${esc(t.fr)}</div><div class="sen">${esc(t.en)}</div>
+     <div><span class="zone">${esc(t.zone)}</span></div>
+     <button class="shold" data-act="sth" data-id="${id}" aria-label="Lancer le minuteur de ${t.t} secondes">▶ ${t.t} s<small>${esc(t.side||'')}</small></button>
+     <p class="scue">${esc(t.cue)}</p></article>`}).join('');
+  const editBar=date!==Store.today()?`<div class="note editing">Modification de la séance du <b>${fmtDay(date)}</b></div>`:'';
+  return `<div class="top"><button class="btn sm" data-act="list">‹ Liste</button><span class="mute small">Étirements</span></div>${editBar}
+   <div class="prog">${prog}</div>
+   <h1>Étirements</h1><div class="mute">${ids.length} étirements · environ ${strMin(sess)} min. Tiens chaque position, respire, sans douleur. Le bouton noir lance le minuteur.</div>
+   <div class="sgrid">${tiles}</div>
+   <div class="navbtns"><button class="btn big" data-act="prev">‹ Préc.</button><button class="btn big primary${all?' ready':''}" data-act="next">Terminer ✓</button></div>`;
+}
 function onTick(k){
   const sess=sessOf(S.sess),st=sess.stations[S.st],date=curDate(),it=E(sess,st[S.exi],date),ex=EX[it.ex];
   const cur=Store.get(date,sess.id,it.ex)[k]||{};
@@ -196,10 +236,10 @@ function onTick(k){
   beepPrime();
   if(it.rest&&date===Store.today())startTimer(it.rest,ex.en);
   const other=st.findIndex((x,j)=>j!==S.exi&&setsDone(sess,x,date)<E(sess,x,date).sets);
-  if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,st[S.exi],date)){S.exi=other;S.vid=false;S.open.vid=S.open.notes=false;scrollTo(0,0)}
+  if(st.length>1&&other>=0&&S.exi!==other&&setsDone(sess,st[other],date)<=setsDone(sess,st[S.exi],date)){S.exi=other;S.vid=false;S.open.vid=S.open.notes=false;toTop()}
   render();
 }
-function goStation(i){S.st=i;S.exi=0;S.vid=false;S.open.vid=S.open.notes=false;scrollTo(0,0);wake();render()}
+function goStation(i){S.st=i;S.exi=0;S.vid=false;S.open.vid=S.open.notes=false;toTop();wake();render()}
 
 /* ---------- minuteur de repos (basé sur l’heure de fin, survit à la mise en veille) ---------- */
 let T=null,tick=null,actx=null,aud=null,audOk=false,wavUrl=null,sndErr='';
@@ -239,7 +279,7 @@ function beep(test){
   else webBeep('ambient');
   try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}
 function sndStatus(){return 'Mode '+sndMode()+' · session '+sessType()+' · audio '+(audOk?'prêt':'non amorcé')+' · Web Audio '+(actx?actx.state:'—')+(sndErr?' · erreur : '+sndErr:'')}
-function startTimer(sec,label){T={end:Date.now()+sec*1000,label,fired:false};clearInterval(tick);tick=setInterval(drawTimer,250);drawTimer()}
+function startTimer(sec,label,hold){T={end:Date.now()+sec*1000,label,hold:!!hold,fired:false};clearInterval(tick);tick=setInterval(drawTimer,250);drawTimer()}
 function stopTimer(){T=null;clearInterval(tick);$('#timer').hidden=true;$('#timer').className='timer'}
 function drawTimer(){
   const el=$('#timer');document.body.classList.toggle('hastimer',!!T);if(!T){el.hidden=true;return}
@@ -247,8 +287,8 @@ function drawTimer(){
   if(left<=0&&!T.fired){T.fired=true;beep()}
   const m=Math.floor(Math.max(left,0)/60),s=Math.max(left,0)%60,over=left<=0;
   el.hidden=false;el.className='timer'+(over?' end':'');
-  el.innerHTML=`<div><span class="t" aria-live="off">${m}:${String(s).padStart(2,'0')}</span><span class="lbl">${over?'Repos terminé':'Repos'}${T.label?'<b>'+esc(T.label)+'</b>':''}</span>`+
-   (over?'':`<button data-act="tm" data-d="-15">−15</button><button data-act="tm" data-d="15">+15</button>`)+`<button data-act="tmstop">${over?'OK':'Passer'}</button></div>`;
+  el.innerHTML=`<div><span class="t" aria-live="off">${m}:${String(s).padStart(2,'0')}</span><span class="lbl">${over?(T.hold?'Terminé':'Repos terminé'):(T.hold?'Tiens':'Repos')}${T.label?'<b>'+esc(T.label)+'</b>':''}</span>`+
+   (over||T.hold?'':`<button data-act="tm" data-d="-15">−15</button><button data-act="tm" data-d="15">+15</button>`)+`<button data-act="tmstop">${over?'OK':'Passer'}</button></div>`;
 }
 /* ---------- écran allumé ---------- */
 let lock=null;
@@ -264,14 +304,14 @@ function render(){
 function onAct(e){
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,sess=sessOf(S.sess);
   if(a==='inp')return;
-  if(a==='tab'){if(S.tab==='progress'&&b.dataset.id==='progress')S.prog.ex=null;S.tab=b.dataset.id;S.st=null;if(S.tab==='train'){S.sess=null;S.date=null}persist();scrollTo(0,0);render()}
-  else if(a==='sess'){S.sess=b.dataset.id;S.st=null;S.date=null;scrollTo(0,0);render()}
+  if(a==='tab'){if(S.tab==='progress'&&b.dataset.id==='progress')S.prog.ex=null;S.tab=b.dataset.id;S.st=null;if(S.tab==='train'){S.sess=null;S.date=null}persist();toTop();render()}
+  else if(a==='sess'){S.sess=b.dataset.id;S.st=null;S.date=null;toTop();render()}
   else if(a==='fresh'){const td=Store.today(),n=Store.countDone(td,S.sess);
     if(n&&!confirm('Une séance existe déjà aujourd’hui ('+n+' série'+(n>1?'s':'')+'). La remplacer par une séance vide ? L’ancienne reste récupérable dans Réglages > Sauvegarde > Annuler.'))return;
-    if(n)Store.resetSession(td,S.sess);S.date=td;S.st=null;scrollTo(0,0);render()}
-  else if(a==='start'){S.date=b.dataset.d;S.st=null;scrollTo(0,0);render()}
-  else if(a==='choice'){S.date=null;S.st=null;scrollTo(0,0);render()}
-  else if(a==='home'){S.sess=null;S.date=null;S.st=null;scrollTo(0,0);render()}
+    if(n)Store.resetSession(td,S.sess);S.date=td;S.st=null;toTop();render()}
+  else if(a==='start'){S.date=b.dataset.d;S.st=null;toTop();render()}
+  else if(a==='choice'){S.date=null;S.st=null;toTop();render()}
+  else if(a==='home'){S.sess=null;S.date=null;S.st=null;toTop();render()}
   else if(a==='open')goStation(+b.dataset.i);
   else if(a==='list'){S.st=null;render()}
   else if(a==='ex'){S.exi=+b.dataset.k;S.vid=false;S.open.vid=S.open.notes=false;render()}
@@ -280,11 +320,13 @@ function onAct(e){
   else if(a==='swdel'){const dt=b.dataset.d,sid=b.dataset.s,t=Store.sessTitle(dt,sid).split(' : ')[0];
     if(!confirm('Supprimer la séance « '+t+' » du '+fmtDay(dt)+' ? Seules les données de cette séance sont effacées. Récupérable dans Réglages > Sauvegarde > Annuler.'))return;
     Store.deleteSession(dt,sid);if(S.date===dt&&S.sess===sid)S.date=null;render();toast('Séance supprimée')}
-  else if(a==='goprog'){S.tab='settings';S.open.program=true;S.st=null;persist();scrollTo(0,0);render()}
+  else if(a==='goprog'){S.tab='settings';S.open.program=true;S.st=null;persist();toTop();render()}
   else if(a==='alt'){Store.pickSet(curDate(),sess.id,b.dataset.base,b.dataset.ex);S.vid=false;S.open.vid=S.open.notes=false;render()}
   else if(a==='tick')onTick(+b.dataset.k);
   else if(a==='prev'&&S.st>0)goStation(S.st-1);
-  else if(a==='next'){if(S.st<sess.stations.length-1)goStation(S.st+1);else{S.st=null;scrollTo(0,0);render();toast('Séance terminée. Bien joué.')}}
+  else if(a==='next'){if(S.st<nSt(sess)-1)goStation(S.st+1);else{S.st=null;toTop();render();toast('Séance terminée. Bien joué.')}}
+  else if(a==='stk'){Store.strToggle(curDate(),sess.id,b.dataset.id);render()}
+  else if(a==='sth'){const t=STRETCH[b.dataset.id];beepPrime();startTimer(t.t,t.fr,true)}
   else if(a==='tm'&&T){T.end+=+b.dataset.d*1000;T.fired=false;drawTimer()}
   else if(a==='tmstop')stopTimer();
   else if(a==='guide'){S.guide=b.dataset.id;render()}
