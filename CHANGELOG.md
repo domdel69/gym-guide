@@ -1,0 +1,51 @@
+# Changelog
+
+Per-version change notes for Gym Guide, newest first. Extracted from the living plan on 2026-11-08; the commit for each release is in the README table. Tags: [S] stated by the user, [O] observed, [I] inferred, [?] unconfirmed.
+
+## Version 0.26 changes
+
+(1) Stretch pictograms replaced by photos from Free Exercise DB (public domain, github.com/yuhonas/free-exercise-db; credited in `img/README.md` and on the stretch screen); two frames alternate; the commercial example sheets he attached were not copied (copyright); photos not illustrations, none for sphinx or doorway chest, so "Overhead reach" and "Chest opener (elbows back)" replaced them; stretch names EN first, FR second. (2) Countdown: ▶ per set on the side plank (duration field, default 45 s, "Tiens" timer), "Minuteur" card on elliptical and bike (±30 s, saved per exercise on the phone, `settings.dur`); same beep at the end. (3) Tab bar: body now fixed to the screen edges (the 0.25 version used the visual viewport height, which left a gap under the bar on the iPhone, cause inferred from his screenshot), slimmer bar, safe-area padding reduced. (4) Late beep: cause found in the code, a beep scheduled on a suspended Web Audio context played at the next tap (start of the next set); now the beep is never scheduled on a suspended context, fires from a timeout at the exact end, and is skipped if more than 2.5 s late (iOS suspends the page when the screen locks; a beep then cannot sound on time; a silent keep-alive audio would pause his music, not done).
+
+## Version 0.25 changes
+
+(1) [layout approach superseded in 0.26: body is fixed to the screen edges, visual viewport used only while the keyboard is open] Bug "tab bar gone, timer displaced after scrolling" (screenshot: both stuck mid-screen, probably after the keyboard on iOS; cause inferred, not reproduced [?]): the page no longer scrolls (body fixed, sized to the visual viewport via `--vvh`/`--vvt`), `#app` is the scroller, the rest timer and tab bar are flex children above the bottom (nothing position:fixed), the tab bar hides while typing, `toTop()` replaces window scrolling. (2) Accueil week bar: 12 segments filled by gym sessions done in each programme week (full = 2, half = 1, ring = current week, outline = deload), caption "Semaine n du programme : x/2"; cause of the bug: the current-week colour was overridden on the done hero. Hero text clipping fixed. Programme weeks run from the start date (Wed 4 Nov) while the strip is Monday to Sunday; the hero line "Cette semaine" counts the calendar week. (3) Notes fold shows the note text (lines joined by " · ", single line, ellipsis when too long) instead of "écrite", left aligned. (4) Stretch station: tiles with pictogram, muscle zone, hold timer button (reuses the rest timer in "Tiens" mode), tick; ticks stored in `d.str[date][session]`; not in Suivi; PDFs list the stretches; `check_data.js` enforces max 5 and known ids. Timer buttons restyled.
+
+## Version 0.23 changes, step 2
+
+(1) Suivi opens with 4 tiles: gym sessions this calendar week out of 2 (plus home count), gym sessions over the last 1 to 4 weeks out of 2 per week, kg volume this week with the change versus last week (lift and assisted exercises only, assisted needs the body weight), and records in the last 14 days (tap = Exercices list). (2) Réglages order: Application, Programme (now also holds Poids de corps, next to the measurements), Séance (open by default), Sauvegarde, Vidéos, À imprimer; folds show a one-line summary (week n / 12, sound and screen). (3) Swipe tile fix: on the iPhone a tile in Suivi (details/summary) stayed stuck open at about 91 px, so the drag was never finalised; the gesture now also ends on touchend and touchcancel, tile text is not selectable. Cause inferred, not reproduced on the device [?]. An explicit setPointerCapture was tried and removed: it fires lostpointercapture and ended the swipe at once.
+
+## Version 0.22 changes, look and feel direction B step 1
+
+(1) Accueil = hero card for the suggested session (week n / 12, block, phase, gym sessions done this calendar week, progress bar, big Commencer button), then a Monday to Sunday strip (letters A, B, C, M for sessions done, today outlined), then the four session cards under "Toutes les séances". Suggestion rule [I]: A, then B while missing this week (C counts as one gym session); after 2 gym sessions the home routine; a gym session yesterday gives the home routine with the 48 h note and a "Faire quand même" button; after a session today the hero reads "faite" with the 48 h advice. Without a start date the prompt card sits under the strip; deload weeks show the banner under the hero. (2) Station screen: sets and next-station buttons sit directly under the target, Video and Notes folds moved below; next set to do has an accent border and orange number; the next button gets a green ring when all sets are ticked. (3) Rest timer shows the exercise name.
+
+## Version 0.21 changes
+
+(1) swipe-to-delete: the red layer is hidden unless a swipe is under way or the tile is open (it showed through the tile edges on the iPhone); (2) thousands separator ' on chart axes, labels and the accessible text (12'500); decimals keep the comma; (3) Suivi > exercise: charts in the order Volume, 1RM estimé (lift only), Charge, Répétitions, records and week markers as in backlog 1b; the exercise header shows the estimated 1RM. Records need at least 2 sessions; the first session is never a record; assisted pull-up: record = lowest assistance. Plan unchanged, so no new PDFs.
+
+## Version 0.20 changes
+
+(1) Sound: louder beep (WAV with a harmonic at higher amplitude, Web Audio gain .7); the audio session type is set explicitly per mode on every prime and beep, a fresh `<audio>` element is unlocked on every set tick, everything resets on mode change and on "Tester le son", which now shows a status line (mode, session type, audio state, Web Audio state, last error). Intermittent failure cause not confirmed [?]: hypothesis = stale audio element or session type after switching modes or an iOS interruption. (2) Swipe a session tile to the right (Séance history and Suivi > Séances) to reveal "Supprimer"; confirm, then only that date and session are deleted; recoverable via Réglages > Sauvegarde > Annuler. (3) Suivi > exercise: new "Volume total" chart per session (reps x kg over all sets; total reps or seconds for reps and time exercises; assisted pull-up = reps x (body weight - assistance), needs Réglages > Poids de corps, stored on the phone only).
+
+## Station screen in 0.19
+
+"Vidéo" and "Notes" are collapsible cards, closed by default (they close again when the exercise or station changes); Notes = free text per exercise id (`notes[id]` in the log data, phone only, kept by "Effacer le journal", included in the export), saved while typing; the summary shows "écrite" when a note exists. A "Superset" chip (orange) marks supersets on the station list and above the exercise tabs.
+
+## Timer sound in 0.19
+
+Réglages > Séance > "Mode du son" with a "Tester le son" button. Prioritaire (default): short WAV played through an `<audio>` element unlocked by the tick gesture (iOS playback channel, audible with the silent switch on and independent of the Web Audio state; may pause the music for a moment); Mélangé: Web Audio in an ambient session (does not pause the music, but muted by the silent switch); fallback to Web Audio if the audio element is refused. Cause of the music problem not confirmed on the device [?]: the app is installed on the iPhone and Claude cannot test sound there; user to test with music playing.
+
+## Timed side plank in 0.18
+
+new kind `time` (duration in seconds, stored in the `reps` field; Suivi shows seconds and a duration chart); id `sideplanktime`, old id `sideplank` aliased to it; field "Durée (s)" prefilled with the last time, placeholder 45 s on the first.
+
+## Programme tracking in 0.18
+
+Réglages > Programme holds the start date (`settings.start`, phone only); Accueil shows "Semaine n / 12", block, phase (week 1 calibration, weeks 2–5 and 7–11 progression, weeks 6 and 12 deload) and a 12-segment bar; weeks 6 and 12 show the deload rule banner (display only, sets are not reduced automatically), also on the session screens; week 6 also prompts to export the log for Block 2; after week 12 a "programme terminé" card. Measurement reminder: waist and photos due start + 6 weeks, then 6 weeks after the last one noted; card on Accueil from 7 days before the due date (late days counted), button "Fait aujourd'hui" with optional waist in cm (`checks` list on the phone, never in the repo); the app cannot send notifications, the reminder shows when the app is opened.
+
+## Variants in 0.17
+
+the stations with options (reverse pec deck in B and C, side plank in B) show a "Variante" row of chips with the other exercises (English names, planned one first, the one in use hidden) and a "⇄ 3 or 4 variantes" hint in the station list; the choice is stored per date and session (`pick[date][session][planned id]`, addition to the log format; a new session starts on the planned exercise); options are `alt` on session items in `data-sessions.js` (`ALT_REAR`, `ALT_CORE`); new ids bandfacepull, bandpallof, birddog; cable options reuse facepull and pallof (renamed Cable face pull, Cable Pallof press); default videos of the new ids picked by title, not reviewed. The PDFs print an "Ou :" line under those rows.
+
+## 0.1 to 0.16
+
+See `git log` and the README table; summary: stations, rest timer, logging, video settings, offline mode, home screen, dated Suivi with charts, Réglages restructured, rollback archive, log-consistency tooling, warm-up inside sessions A, B, C, swap options.
