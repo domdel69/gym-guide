@@ -1,0 +1,160 @@
+/* Stockage local (localStorage). Tout reste sur l’appareil.
+   Règles de cohérence du journal :
+   - le journal est indexé par identifiant d’exercice (log[date][séance][exercice]), jamais par position ni par nom ;
+   - le format du journal ne change que par ajout : une ancienne version de l’app peut toujours le relire ;
+   - chaque série enregistrée garde un instantané du nom et du type de l’exercice (meta), pour qu’un exercice
+     retiré du programme reste lisible dans le Suivi ;
+   - un exercice renommé ou fusionné se déclare dans ALIASES (data-ex.js) : le journal est migré au démarrage,
+     après une copie de sécurité (preMigration). */
+const KEY='gym-guide-v1',SCHEMA=2;
+const Store=(()=>{
+  const defaults=()=>({schema:SCHEMA,log:{},meta:{ex:{},sess:{}},settings:{videos:{},awake:true,sound:true}});
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  const norm=j=>{
+    j.log=j.log||{};j.meta=j.meta||{};j.meta.ex=j.meta.ex||{};j.meta.sess=j.meta.sess||{};
+    j.settings=Object.assign({videos:{},awake:true,sound:true},j.settings);j.settings.videos=j.settings.videos||{};
+    return j};
+  /* 0.27 : nettoyage d’un fichier importé. Ne garde que des dates, identifiants, nombres et textes valides,
+     pour qu’un fichier modifié ou corrompu ne puisse ni casser l’affichage ni injecter du HTML. */
+  const isD=k=>/^\d{4}-\d{2}-\d{2}$/.test(k),isId=k=>/^[A-Za-z0-9_-]{1,40}$/.test(k);
+  const N=v=>{if(v==null||v==='')return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
+  const T=(v,max=2000)=>typeof v==='string'?v.slice(0,max):'';
+  const obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
+  function clean(src){src=obj(src);const o={schema:N(src.schema)||1,log:{},meta:{ex:{},sess:{}},settings:{videos:{},awake:true,sound:true}};
+    for(const dt in obj(src.log)){if(!isD(dt))continue;for(const sid in obj(src.log[dt])){if(!isId(sid))continue;
+      for(const ex in obj(src.log[dt][sid])){if(!isId(ex))continue;const a=src.log[dt][sid][ex];if(!Array.isArray(a))continue;
+        ((o.log[dt]=o.log[dt]||{})[sid]=o.log[dt][sid]||{})[ex]=a.map(s=>{s=obj(s);const x={done:s.done===true};
+          if('reps' in s)x.reps=N(s.reps);if('kg' in s)x.kg=N(s.kg);if(N(s.t)!=null)x.t=N(s.t);return x})}}}
+    const m=obj(src.meta);for(const id in obj(m.ex)){if(!isId(id))continue;const e=obj(m.ex[id]);
+      o.meta.ex[id]={en:T(e.en,120),fr:T(e.fr,120),kind:['lift','assist','reps','tick','time'].includes(e.kind)?e.kind:'reps'}}
+    for(const k in obj(m.sess)){const [dt,sid]=k.split('|');if(!isD(dt)||!isId(sid||''))continue;const e=obj(m.sess[k]);o.meta.sess[k]={title:T(e.title,120),v:T(e.v,20)}}
+    const st=obj(src.settings),os=o.settings;
+    for(const id in obj(st.videos)){const v=st.videos[id];if(isId(id)&&/^[A-Za-z0-9_-]{11}$/.test(v))os.videos[id]=v}
+    if(typeof st.awake==='boolean')os.awake=st.awake;if(typeof st.sound==='boolean')os.sound=st.sound;
+    if(st.soundMode==='mix'||st.soundMode==='priority')os.soundMode=st.soundMode;
+    if(isD(st.start||''))os.start=st.start;if(N(st.bodyKg)>0)os.bodyKg=N(st.bodyKg);
+    for(const id in obj(st.dur)){if(isId(id)&&N(st.dur[id])>0)(os.dur=os.dur||{})[id]=N(st.dur[id])}
+    for(const dt in obj(src.pick)){if(!isD(dt))continue;for(const sid in obj(src.pick[dt])){if(!isId(sid))continue;
+      for(const b in obj(src.pick[dt][sid])){const v=src.pick[dt][sid][b];if(isId(b)&&isId(String(v)))(((o.pick=o.pick||{})[dt]=o.pick[dt]||{})[sid]=o.pick[dt][sid]||{})[b]=v}}}
+    for(const dt in obj(src.str)){if(!isD(dt))continue;for(const sid in obj(src.str[dt])){const a=src.str[dt][sid];
+      if(isId(sid)&&Array.isArray(a))((o.str=o.str||{})[dt]=o.str[dt]||{})[sid]=a.filter(x=>isId(String(x)))}}
+    for(const id in obj(src.notes)){if(isId(id)&&T(src.notes[id]))(o.notes=o.notes||{})[id]=T(src.notes[id])}
+    if(Array.isArray(src.checks))o.checks=src.checks.map(obj).filter(c=>isD(c.date||'')).map(c=>N(c.waist)!=null?{date:c.date,waist:N(c.waist)}:{date:c.date});
+    const ui=obj(src.ui);if(['train','progress','guides','settings'].includes(ui.tab))o.ui={tab:ui.tab};
+    return o}
+  let d=defaults();
+  try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j)d=norm(j)}catch(e){}
+  /* 0.27 : un échec d’écriture (stockage plein ou bloqué) n’est plus silencieux : avertissement une fois par session. */
+  let saveWarned=false;
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(d));return true}catch(e){
+    if(!saveWarned){saveWarned=true;setTimeout(()=>{try{alert('Enregistrement impossible sur ce téléphone (stockage plein ou bloqué). Exporte ta sauvegarde (Réglages > Sauvegarde) avant de continuer.')}catch(x){}},0)}return false}};
+  /* Demande un stockage persistant (le navigateur ne l’efface pas pour faire de la place). Sans effet si refusé. */
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persisted().then(p=>{if(!p)navigator.storage.persist()}).catch(()=>{})}catch(e){}
+  const today=()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')};
+  const doneSets=a=>(a||[]).filter(s=>s&&s.done);
+  const snap=id=>EX[id]?{en:EX[id].en,fr:EX[id].fr,kind:EX[id].kind}:null;
+
+  /* Migration : renommages (ALIASES), instantanés manquants, numéro de schéma. Idempotente. */
+  const resolve=id=>{const A=window.ALIASES||{};let n=0;while(A[id]&&n++<5)id=A[id];return id};
+  function migrate(){
+    let changed=false;const A=window.ALIASES||{};
+    const renamed=Object.keys(d.log).some(dt=>Object.keys(d.log[dt]).some(sid=>Object.keys(d.log[dt][sid]).some(ex=>A[ex])));
+    if(renamed){
+      d.preMigration={at:new Date().toISOString(),from:d.schema||1,to:SCHEMA,log:clone(d.log)};
+      for(const dt in d.log)for(const sid in d.log[dt]){const L=d.log[dt][sid];
+        for(const ex of Object.keys(L)){if(!A[ex])continue;const to=resolve(ex);
+          L[to]=(L[to]||[]).concat((L[ex]||[]).filter(Boolean));delete L[ex]}}
+      for(const old of Object.keys(A)){const to=resolve(old);
+        if(d.settings.videos[old]){if(!d.settings.videos[to])d.settings.videos[to]=d.settings.videos[old];delete d.settings.videos[old]}
+        delete d.meta.ex[old]}
+      changed=true}
+    if(d.notes)for(const old of Object.keys(A)){if(!d.notes[old])continue;const to=resolve(old);
+      d.notes[to]=d.notes[to]?d.notes[to]+'\n'+d.notes[old]:d.notes[old];delete d.notes[old];changed=true}
+    for(const dt in d.log)for(const sid in d.log[dt])for(const ex in d.log[dt][sid]){
+      if(!d.meta.ex[ex]){const s=snap(ex);if(s){d.meta.ex[ex]=s;changed=true}}}
+    if((d.schema||1)<SCHEMA){d.schema=SCHEMA;changed=true}
+    if(changed)save()}
+  migrate();
+
+  /* Journal */
+  const get=(date,sid,ex)=>((d.log[date]||{})[sid]||{})[ex]||[];
+  const setSet=(date,sid,ex,i,v)=>{
+    const L=((d.log[date]=d.log[date]||{})[sid]=d.log[date][sid]||{});const a=(L[ex]=L[ex]||[]);
+    a[i]=Object.assign(a[i]||{},v);
+    const s=snap(ex);if(s)d.meta.ex[ex]=s;
+    const k=date+'|'+sid,S0=window.SESSIONS&&SESSIONS.find(x=>x.id===sid);
+    if(!d.meta.sess[k])d.meta.sess[k]={title:S0?S0.title:sid,v:window.APP_VERSION||''};
+    save()};
+  const dates=()=>Object.keys(d.log).sort();
+
+  /* Infos d’un exercice, même s’il a disparu du programme. */
+  const info=id=>{
+    if(EX[id])return Object.assign({live:true},snap(id));
+    const m=d.meta.ex[id];if(m)return Object.assign({live:false},m);
+    let kg=false;for(const dt in d.log)for(const sid in d.log[dt]){doneSets(d.log[dt][sid][id]).forEach(s=>{if(s.kg!=null&&s.kg!=='')kg=true})}
+    return{live:false,en:id,fr:'',kind:kg?'lift':'reps'}};
+  const tracked=id=>info(id).kind!=='tick';
+  const sessTitle=(date,sid)=>{const S0=window.SESSIONS&&SESSIONS.find(x=>x.id===sid);return S0?S0.title:((d.meta.sess[date+'|'+sid]||{}).title||sid)};
+
+  /* Historique d’un exercice : [{date, sets:[{reps,kg}], sids:[…]}], du plus récent au plus ancien, séries cochées seulement.
+     Le Suivi exclut l’échauffement ; all:true l’inclut (préremplissage « dernière fois »). */
+  /* Exercice d’échauffement dans cette séance (station warm:true) : jamais dans le Suivi. */
+  const warmOnly=(sid,ex)=>{if(sid==='warmup')return true;const S0=window.SESSIONS&&SESSIONS.find(x=>x.id===sid);if(!S0)return false;let n=0,w=0;
+    S0.stations.forEach(st=>st.forEach(it=>{if(it.ex===ex){n++;if(it.warm)w++}}));return n>0&&n===w};
+  const history=(ex,all)=>{const out=[];for(const dt of dates().reverse()){const best=[],sids=[];
+    for(const sid in d.log[dt]){if(!all&&warmOnly(sid,ex))continue;const a=doneSets(d.log[dt][sid][ex]);if(a.length){best.push(...a);sids.push(sid)}}
+    if(best.length)out.push({date:dt,sets:best,sids})}return out};
+  const last=(ex,beforeDate)=>history(ex,true).find(h=>h.date<beforeDate);
+  /* Séances enregistrées pour le Suivi : sans échauffement ni exercices sans reps ni charge. */
+  const sessions=()=>{const out=[];for(const dt of dates().reverse()){
+    for(const sid in d.log[dt]){const exs=[];let t=0;
+      for(const ex in d.log[dt][sid]){if(!tracked(ex)||warmOnly(sid,ex))continue;const sets=doneSets(d.log[dt][sid][ex]);
+        if(sets.length){exs.push({ex,sets});sets.forEach(s=>{t=Math.max(t,s.t||0)})}}
+      if(exs.length)out.push({date:dt,sid,title:sessTitle(dt,sid),exs,t})}}
+    return out.sort((a,b)=>a.date===b.date?b.t-a.t:(a.date<b.date?1:-1))};
+  /* Exercices suivis qui ont un historique : du programme actuel d’abord, puis les anciens. */
+  const trackedIds=()=>{const seen=new Set(),live=[],old=[];
+    const order=[];SESSIONS.forEach(S0=>{S0.stations.forEach(st=>st.forEach(it=>order.push(it.ex)))});
+    for(const id of [...new Set(order.concat(Object.keys(EX)))])if(EX[id]&&tracked(id)&&history(id).length){seen.add(id);live.push(id)}
+    for(const dt in d.log)for(const sid in d.log[dt])for(const id in d.log[dt][sid])
+      if(!seen.has(id)&&!warmOnly(sid,id)&&tracked(id)&&history(id).length){seen.add(id);old.push(id)}
+    return{live,old}};
+  const lastDate=(sid,before)=>{for(const dt of dates().reverse()){if(before&&dt>=before)continue;const L=d.log[dt][sid];if(L&&Object.keys(L).some(ex=>doneSets(L[ex]).length))return dt}return null};
+  /* Dates où la séance sid a des séries cochées, de la plus récente à la plus ancienne. */
+  const sessionDates=sid=>dates().reverse().filter(dt=>d.log[dt][sid]&&Object.keys(d.log[dt][sid]).some(ex=>doneSets(d.log[dt][sid][ex]).length));
+  /* Variantes choisies : pick[date][séance][exercice prévu] = exercice choisi. Ajout au format, absent = exercice prévu. */
+  const pickGet=(date,sid,base)=>(((d.pick||{})[date]||{})[sid]||{})[base]||null;
+  const pickSet=(date,sid,base,ex)=>{d.pick=d.pick||{};const P=(d.pick[date]=d.pick[date]||{});const Q=(P[sid]=P[sid]||{});
+    if(!ex||ex===base)delete Q[base];else Q[base]=ex;
+    if(!Object.keys(Q).length)delete P[sid];if(!Object.keys(P).length)delete d.pick[date];save()};
+  /* Notes par exercice (id de l’exercice choisi) : notes[exercice] = texte. Ajout au format, absent = aucune note. */
+  const noteGet=id=>(d.notes||{})[id]||'';
+  const noteSet=(id,text)=>{d.notes=d.notes||{};if((text||'').trim())d.notes[id]=text;else delete d.notes[id];save()};
+  const resetSession=(date,sid)=>{stash('avant nouvelle séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}if(d.str&&d.str[date])delete d.str[date][sid];delete d.meta.sess[date+'|'+sid];save()};
+  /* Durée choisie pour le minuteur d’un exercice chronométré (secondes, sur ce téléphone). */
+  const durGet=id=>((d.settings.dur)||{})[id]||0;
+  const durSet=(id,sec)=>{d.settings.dur=d.settings.dur||{};d.settings.dur[id]=sec;save()};
+  /* Étirements faits (addition au format : d.str[date][séance] = [identifiants]). */
+  const strGet=(date,sid)=>((d.str||{})[date]||{})[sid]||[];
+  const strToggle=(date,sid,id)=>{d.str=d.str||{};const D=(d.str[date]=d.str[date]||{}),a=(D[sid]=D[sid]||[]),i=a.indexOf(id);
+    if(i<0)a.push(id);else a.splice(i,1);if(!a.length){delete D[sid];if(!Object.keys(D).length)delete d.str[date]}save()};
+  const countDone=(date,sid)=>{const L=(d.log[date]||{})[sid]||{};return Object.keys(L).reduce((n,ex)=>n+doneSets(L[ex]).length,0)};
+
+  const videoId=ex=>d.settings.videos[ex]||(EX[ex]||{}).yt||'';
+  const parseYt=s=>{s=(s||'').trim();if(!s)return '';let m=s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);if(m)return m[1];return /^[A-Za-z0-9_-]{11}$/.test(s)?s:null};
+
+  /* Filet de sécurité : une copie de l’état avant tout effacement ou import (un seul emplacement). */
+  const UNDO=KEY+'-undo';
+  const stash=why=>{try{localStorage.setItem(UNDO,JSON.stringify({at:new Date().toISOString(),why,data:d}))}catch(e){}};
+  const undoInfo=()=>{try{const u=JSON.parse(localStorage.getItem(UNDO)||'null');return u?{at:u.at,why:u.why}:null}catch(e){return null}};
+  const undo=()=>{const u=JSON.parse(localStorage.getItem(UNDO)||'null');if(!u)throw new Error('none');
+    stash('avant annulation');d=norm(u.data);Store.d=d;migrate();save()};
+
+  const deleteSession=(date,sid)=>{stash('avant suppression de séance');if(d.pick&&d.pick[date]){delete d.pick[date][sid];if(!Object.keys(d.pick[date]).length)delete d.pick[date]}if(d.log[date]){delete d.log[date][sid];if(!Object.keys(d.log[date]).length)delete d.log[date]}if(d.str&&d.str[date])delete d.str[date][sid];delete d.meta.sess[date+'|'+sid];save()};
+  return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,strGet,strToggle,durGet,durSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,deleteSession,
+    exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
+    importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
+      stash('avant import');d=norm(clean(j.data));Store.d=d;migrate();save()},
+    clearLog:()=>{stash('avant effacement');d.log={};d.pick={};d.meta.sess={};Store.d=d;save()},
+    reset:()=>{stash('avant réinitialisation');d=defaults();Store.d=d;save()}};
+})();

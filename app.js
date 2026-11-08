@@ -15,17 +15,17 @@ const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.te
 
 /* Zone visible (iOS laisse parfois la page décalée après le clavier ou un défilement) : le corps suit la zone visible, la barre d’onglets se masque pendant la saisie. */
 (()=>{const vv=window.visualViewport,r=document.documentElement.style;
-  /* 0.27 : en mode app (écran d’accueil), iOS peut annoncer une hauteur de fenêtre trop courte (bande vide sous la barre d’onglets sur iPhone 11).
-     L’app occupe alors tout l’écran : on prend la hauteur de l’écran dans l’orientation courante. */
+  /* 0.28 : sur son iPhone 11 en mode app, iOS arrête la vue web environ 48 px au-dessus du bas de l’écran et peint la bande restante
+     (couleur de fond du manifeste). Rien ne peut être dessiné dans cette bande (la 0.27 l’a tenté : la barre était coupée).
+     On garde donc la hauteur de la fenêtre et, si la vue est plus courte que l’écran, la classe .shortvp fond la barre d’onglets avec la bande. */
   const standalone=()=>navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
   /* Marge iOS du bas (barre d’accueil), lue par une sonde CSS. */
   const safeB=()=>{const s=document.createElement('div');s.style.cssText='position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
     document.documentElement.appendChild(s);const h=s.getBoundingClientRect().height;s.remove();return h};
-  /* Correction seulement en mode app ET si iOS annonce une barre d’accueil (la vue web va donc jusqu’au bord de l’écran). */
-  const appH=()=>{let h=window.innerHeight;if(standalone()&&safeB()>0&&screen&&screen.width&&screen.height){const port=window.innerHeight>=window.innerWidth;
-    h=Math.max(h,port?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height))}return h};
-  window.layoutInfo=()=>'fenêtre '+window.innerHeight+' · écran '+screen.height+' · zone visible '+(vv?Math.round(vv.height):'–')+' · marge bas '+Math.round(safeB())+' · app '+(standalone()?'oui':'non')+' · hauteur utilisée '+appH();
-  const fit=()=>{r.setProperty('--apph',appH()+'px');if(!vv)return;const kb=window.innerHeight-vv.height>120&&vv.scale<=1.01;
+  const scrH=()=>{if(!screen||!screen.width||!screen.height)return 0;const port=window.innerHeight>=window.innerWidth;return port?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height)};
+  const shortVp=()=>standalone()&&scrH()-window.innerHeight>20&&!document.body.classList.contains('kb');
+  window.layoutInfo=()=>'fenêtre '+window.innerHeight+' · écran '+screen.height+' · zone visible '+(vv?Math.round(vv.height):'–')+' · marge bas '+Math.round(safeB())+' · app '+(standalone()?'oui':'non')+' · vue courte '+(shortVp()?'oui':'non');
+  const fit=()=>{if(!document.body.classList.contains('kb'))document.documentElement.classList.toggle('shortvp',shortVp());if(!vv)return;const kb=window.innerHeight-vv.height>120&&vv.scale<=1.01;
     if(kb){r.setProperty('--vvt',Math.round(vv.offsetTop)+'px');r.setProperty('--vvh',Math.round(vv.height)+'px')}
     else{r.removeProperty('--vvt');r.removeProperty('--vvh')}};
   window.addEventListener('resize',fit);

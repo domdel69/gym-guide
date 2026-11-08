@@ -6,7 +6,7 @@ Personal gym programme web app (PWA, French UI). Hosted on GitHub Pages, logs st
 - `data-ex.js`, `data-sessions.js`: all content (exercises, sessions, guides). Edit these to change the plan.
 - Stretches (0.25, photos from 0.26): `window.STRETCH` in `data-sessions.js` (EN and FR names, hold time, muscle zone); photos in `img/stretch/<id>-0.jpg` and `-1.jpg` (Free Exercise DB, public domain, see `img/README.md`; precached in `sw.js`, copied by `archive.py`); each session lists up to 5 ids in `stretch`. They form a last virtual station (index = number of stations) shown as tiles; ticks are stored in `d.str[date][session]`. Not in the Suivi, not in `EX`.
 - Timers (0.26): `startTimer(sec,label,mode)` with mode rest, hold (stretch, side plank sets) or cd (elliptical, bike); the beep fires from a timeout at the exact end and is never played more than 2.5 s late (iOS suspends the page when the screen locks; a beep scheduled on a suspended Web Audio context used to play at the next tap).
-- Layout (0.26, height rule 0.27): the page never scrolls (`body` fixed at the top, height `--apph` = screen height in home-screen mode when iOS reports a bottom safe area, else the window height; follows the visual viewport only while the keyboard is open; `<html>` has the tab bar colour); `#app` is the scroller; the rest timer and the tab bar are normal flex children, so nothing is `position:fixed`.
+- Layout (0.26, bottom band 0.28): the page never scrolls (`body` fixed at the window height, follows the visual viewport only while the keyboard is open). On the iPhone 11 in app mode iOS paints a band of about 48 px below the web view in the manifest `background_color`; `html.shortvp` then gives the tab bar the same colour so both read as one block.; `#app` is the scroller; the rest timer and the tab bar are normal flex children, so nothing is `position:fixed`.
 - `app.js`, `views.js`, `store.js`, `styles.css`: app code. `sw.js`: offline cache.
 - `version.js`: `APP_VERSION` and `RELEASES` (archived versions). `VERSION` in `sw.js`: bump both on each release (0.1, 0.2, ...).
 - `tools/make_pdfs.py`: regenerates `print/*.pdf` from the data files (needs node, playwright).
@@ -19,7 +19,7 @@ Personal gym programme web app (PWA, French UI). Hosted on GitHub Pages, logs st
 2. `node tools/check_data.js` must pass. Then `node tools/check_data.js --update` (records the exercise ids as released).
 3. `python3 tools/make_pdfs.py`.
 4. `python3 tools/archive.py <version>` (copies the release to `releases/<version>/` and lists it in `version.js`).
-5. Commit and push main. Add the release commit to the table below (tags cannot be pushed from Claude's session; create `v<version>` tags from a terminal if wanted).
+5. Commit on a branch and open a pull request (no direct pushes to main). After the merge, add the merge commit to the table below (tags cannot be pushed from Claude's session; create `v<version>` tags from a terminal if wanted).
 
 ## Keeping the log consistent when the programme changes
 The phone log is `log[date][sessionId][exerciseId] = [{reps, kg, done, t}]`, plus `meta` (name and type snapshot per exercise and session). Rules:

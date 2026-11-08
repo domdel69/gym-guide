@@ -1,20 +1,19 @@
 :root{
   --bg:#eef1f4;--card:#fff;--ink:#13212b;--mute:#5a6b7a;--line:#d6dde4;--stage:#f6f8fa;
-  --accent:#0f766e;--accent-ink:#fff;--hi:#e8590c;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--tab:#ffffffee;--tabs:#ffffff;
+  --accent:#0f766e;--accent-ink:#fff;--hi:#e8590c;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--tab:#ffffffee;
   --r:14px;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0d141a;--card:#16212a;--ink:#e8eef2;--mute:#9bafbd;--line:#273540;--stage:#101a21;
-  --accent:#3cc6b6;--accent-ink:#06201d;--hi:#ff8a4c;--ok:#4ade80;--warn:#f0a53a;--bad:#f87171;--tab:#111b22ee;--tabs:#111b22;color-scheme:dark}}
+  --accent:#3cc6b6;--accent-ink:#06201d;--hi:#ff8a4c;--ok:#4ade80;--warn:#f0a53a;--bad:#f87171;--tab:#111b22ee;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0d141a;--card:#16212a;--ink:#e8eef2;--mute:#9bafbd;--line:#273540;--stage:#101a21;
-  --accent:#3cc6b6;--accent-ink:#06201d;--hi:#ff8a4c;--ok:#4ade80;--warn:#f0a53a;--bad:#f87171;--tab:#111b22ee;--tabs:#111b22;color-scheme:dark}
+  --accent:#3cc6b6;--accent-ink:#06201d;--hi:#ff8a4c;--ok:#4ade80;--warn:#f0a53a;--bad:#f87171;--tab:#111b22ee;color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif}
-html{height:100%;overflow:hidden;background:var(--tabs)}
-/* 0.27 : le fond de <html> a la couleur de la barre d’onglets. Si iOS laisse une bande sous le corps (constaté sur iPhone 11 en mode app), elle prolonge la barre au lieu de faire un trou. */
+html{height:100%;overflow:hidden}
 /* La barre d’onglets fait partie de la mise en page (colonne pleine hauteur) : elle reste en bas de l’écran, que la page soit courte ou longue. */
 /* 0.25 : la page ne défile jamais. #app est la zone qui défile ; minuteur et barre d’onglets sont dans la colonne (rien de « fixed » qui puisse se décaler après le clavier ou un défilement). --vvh et --vvt suivent la zone visible (app.js). */
-body{position:fixed;left:0;right:0;top:var(--vvt,0px);bottom:auto;height:var(--vvh,var(--apph,100%));padding-top:env(safe-area-inset-top);overflow:hidden;overscroll-behavior:none;display:flex;flex-direction:column}
+body{position:fixed;left:0;right:0;top:var(--vvt,0px);bottom:auto;height:var(--vvh,100%);padding-top:env(safe-area-inset-top);overflow:hidden;overscroll-behavior:none;display:flex;flex-direction:column}
 #app{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;width:100%;max-width:640px;margin:0 auto;padding:30px max(16px,env(safe-area-inset-left)) 28px max(16px,env(safe-area-inset-right))}
 h1{font-size:1.7rem;line-height:1.1;margin:6px 0 4px;letter-spacing:-.01em}
 h2{font-size:1.25rem;margin:18px 0 8px}
@@ -36,6 +35,9 @@ button,a.btn,input,select{min-height:44px}
 .tabbar button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.72rem;font-weight:600;color:var(--mute);padding:0;min-height:54px}
 .tabbar button svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tabbar button[aria-current="true"]{color:var(--accent)}
+/* 0.28 : vue web plus courte que l’écran (iPhone 11 en mode app) : iOS peint lui-même la bande du bas avec la couleur de fond du manifeste.
+   La barre prend la même couleur, sans marge de sécurité, pour former un seul bloc avec cette bande, comme les barres d’onglets natives. */
+.shortvp .tabbar{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;padding-top:6px;padding-bottom:2px}
 /* segmented scroller */
 .seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:10px -16px 4px;padding:2px 16px}
 .seg::-webkit-scrollbar{display:none}
