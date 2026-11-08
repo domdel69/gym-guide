@@ -165,7 +165,7 @@ function viewSettings(){
   if(S.open.session===undefined)S.open.session=true;
   const wx=weekOf(Store.today()),progSub=!s.start?'date à définir':wx&&wx.w?'semaine '+wx.w+' / 12':wx&&wx.before?'départ dans '+wx.before+' j':'terminé',sessSub=(s.sound?'son activé':'son coupé')+(s.awake?' · écran allumé':'');
   return `<h1>Réglages</h1>
-   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button></div>
+   <div class="card"><h3>Application</h3><p class="mute small">Version ${window.APP_VERSION||'?'}. Tes séries enregistrées ne sont pas touchées.</p><button class="btn" data-act="update">Forcer la mise à jour</button><p class="mute small" style="margin-top:8px">Affichage : ${esc(window.layoutInfo?layoutInfo():'')}</p></div>
    ${fold('program','Programme',progBody(),progSub)}
    ${fold('session','Séance',`<label class="switch"><span>Garder l’écran allumé en station</span><input type="checkbox" data-opt="awake" ${s.awake?'checked':''}></label>
     <label class="switch"><span>Son à la fin du repos</span><input type="checkbox" data-opt="sound" ${s.sound?'checked':''}></label>
@@ -193,7 +193,7 @@ function progBody(){
    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn" data-act="startnow">Aujourd’hui</button><button class="btn" data-act="startclear">Effacer la date</button></div>
    <p class="small" style="margin-top:8px">${state}${st?` Semaine 1 : ${fmtDate(st)}. Fin du programme : ${fmtDate(addDays(st,83))}.`:''}</p>
    <h3 style="margin-top:16px">Poids de corps</h3>
-   <input type="number" class="fin" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${Store.d.settings.bodyKg||''}" placeholder="ex. 80" aria-label="Poids de corps en kg">
+   <input type="number" class="fin" inputmode="decimal" min="30" max="250" step="0.5" data-body value="${esc(Store.d.settings.bodyKg||'')}" placeholder="ex. 80" aria-label="Poids de corps en kg">
    <p class="mute small">En kg. Sert uniquement au volume des tractions assistées. Reste sur ce téléphone.</p>
    <h3 style="margin-top:16px">Mesures et photos</h3>
    <p class="mute small">Tour de taille et photos (face, profil, dos) toutes les 6 semaines.${n?` Prochaines : ${fmtDate(n.due)}.`:''} Les chiffres restent sur ce téléphone.</p>
@@ -219,12 +219,15 @@ window.onViewAct=async(a,b)=>{
   else if(a==='clearlog'){const n=Store.dates().length;if(confirm('Effacer le journal ('+n+' jour'+(n>1?'s':'')+' enregistré'+(n>1?'s':'')+') ? Cette action est définitive.')){Store.clearLog();toast('Journal effacé');render()}}
   else if(a==='update'){try{toast('Mise à jour en cours…');const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));setTimeout(()=>location.reload(),600)}catch(e){location.reload()}}
 };
+/* Chiffres d’une série : enregistrés à la sortie du champ et aussi pendant la saisie (0.27), pour ne rien perdre si l’écran se verrouille avant. */
+/* La cible (date, séance, exercice, série) est figée au moment de la frappe : un enregistrement différé ne peut pas atterrir sur une autre station. */
+function figCtx(t){const m=/^([rw])(\d+)$/.exec(t.id);if(!m||!S.sess||S.st===null||!sessOf(S.sess).stations[S.st])return null;
+  const sess=sessOf(S.sess),it=E(sess,sess.stations[S.st][S.exi]);return{date:curDate(),sid:sess.id,ex:it.ex,k:+m[2],f:m[1]}}
+function saveFig(t,c){c=c||figCtx(t);if(c)Store.setSet(c.date,c.sid,c.ex,c.k,c.f==='r'?{reps:num(t.value)}:{kg:num(t.value)})}
+let figTimer=null;
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.act==='inp'){const m=/^([rw])(\d+)$/.exec(t.id);
-    if(m&&S.sess&&S.st!==null){const sess=sessOf(S.sess),it=E(sess,sess.stations[S.st][S.exi]),k=+m[2];
-      Store.setSet(curDate(),sess.id,it.ex,k,m[1]==='r'?{reps:num(t.value)}:{kg:num(t.value)})}
-    return}
+  if(t.dataset.act==='inp'){clearTimeout(figTimer);saveFig(t);return}
   if(t.dataset.vid){const id=t.dataset.vid,raw=t.value.trim();
     if(!raw){delete Store.d.settings.videos[id];Store.save();toast('Vidéo par défaut rétablie');render();return}
     const p=Store.parseYt(raw);if(!p){toast('Lien YouTube invalide');render();return}
@@ -238,7 +241,8 @@ document.addEventListener('change',e=>{
 });
 
 let noteTimer=null;
-document.addEventListener('input',e=>{const t=e.target;if(t&&t.id==='exnote'){clearTimeout(noteTimer);noteTimer=setTimeout(()=>Store.noteSet(t.dataset.ex,t.value),400)}});
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.act==='inp'){clearTimeout(figTimer);const c=figCtx(t);figTimer=setTimeout(()=>saveFig(t,c),500);return}
+  if(t&&t.id==='exnote'){clearTimeout(noteTimer);noteTimer=setTimeout(()=>Store.noteSet(t.dataset.ex,t.value),400)}});
 render();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   const had=!!navigator.serviceWorker.controller;let reloaded=false;

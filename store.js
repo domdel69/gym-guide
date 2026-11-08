@@ -14,9 +14,42 @@ const Store=(()=>{
     j.log=j.log||{};j.meta=j.meta||{};j.meta.ex=j.meta.ex||{};j.meta.sess=j.meta.sess||{};
     j.settings=Object.assign({videos:{},awake:true,sound:true},j.settings);j.settings.videos=j.settings.videos||{};
     return j};
+  /* 0.27 : nettoyage d’un fichier importé. Ne garde que des dates, identifiants, nombres et textes valides,
+     pour qu’un fichier modifié ou corrompu ne puisse ni casser l’affichage ni injecter du HTML. */
+  const isD=k=>/^\d{4}-\d{2}-\d{2}$/.test(k),isId=k=>/^[A-Za-z0-9_-]{1,40}$/.test(k);
+  const N=v=>{if(v==null||v==='')return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(',','.'));return isFinite(n)?n:null};
+  const T=(v,max=2000)=>typeof v==='string'?v.slice(0,max):'';
+  const obj=v=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
+  function clean(src){src=obj(src);const o={schema:N(src.schema)||1,log:{},meta:{ex:{},sess:{}},settings:{videos:{},awake:true,sound:true}};
+    for(const dt in obj(src.log)){if(!isD(dt))continue;for(const sid in obj(src.log[dt])){if(!isId(sid))continue;
+      for(const ex in obj(src.log[dt][sid])){if(!isId(ex))continue;const a=src.log[dt][sid][ex];if(!Array.isArray(a))continue;
+        ((o.log[dt]=o.log[dt]||{})[sid]=o.log[dt][sid]||{})[ex]=a.map(s=>{s=obj(s);const x={done:s.done===true};
+          if('reps' in s)x.reps=N(s.reps);if('kg' in s)x.kg=N(s.kg);if(N(s.t)!=null)x.t=N(s.t);return x})}}}
+    const m=obj(src.meta);for(const id in obj(m.ex)){if(!isId(id))continue;const e=obj(m.ex[id]);
+      o.meta.ex[id]={en:T(e.en,120),fr:T(e.fr,120),kind:['lift','assist','reps','tick','time'].includes(e.kind)?e.kind:'reps'}}
+    for(const k in obj(m.sess)){const [dt,sid]=k.split('|');if(!isD(dt)||!isId(sid||''))continue;const e=obj(m.sess[k]);o.meta.sess[k]={title:T(e.title,120),v:T(e.v,20)}}
+    const st=obj(src.settings),os=o.settings;
+    for(const id in obj(st.videos)){const v=st.videos[id];if(isId(id)&&/^[A-Za-z0-9_-]{11}$/.test(v))os.videos[id]=v}
+    if(typeof st.awake==='boolean')os.awake=st.awake;if(typeof st.sound==='boolean')os.sound=st.sound;
+    if(st.soundMode==='mix'||st.soundMode==='priority')os.soundMode=st.soundMode;
+    if(isD(st.start||''))os.start=st.start;if(N(st.bodyKg)>0)os.bodyKg=N(st.bodyKg);
+    for(const id in obj(st.dur)){if(isId(id)&&N(st.dur[id])>0)(os.dur=os.dur||{})[id]=N(st.dur[id])}
+    for(const dt in obj(src.pick)){if(!isD(dt))continue;for(const sid in obj(src.pick[dt])){if(!isId(sid))continue;
+      for(const b in obj(src.pick[dt][sid])){const v=src.pick[dt][sid][b];if(isId(b)&&isId(String(v)))(((o.pick=o.pick||{})[dt]=o.pick[dt]||{})[sid]=o.pick[dt][sid]||{})[b]=v}}}
+    for(const dt in obj(src.str)){if(!isD(dt))continue;for(const sid in obj(src.str[dt])){const a=src.str[dt][sid];
+      if(isId(sid)&&Array.isArray(a))((o.str=o.str||{})[dt]=o.str[dt]||{})[sid]=a.filter(x=>isId(String(x)))}}
+    for(const id in obj(src.notes)){if(isId(id)&&T(src.notes[id]))(o.notes=o.notes||{})[id]=T(src.notes[id])}
+    if(Array.isArray(src.checks))o.checks=src.checks.map(obj).filter(c=>isD(c.date||'')).map(c=>N(c.waist)!=null?{date:c.date,waist:N(c.waist)}:{date:c.date});
+    const ui=obj(src.ui);if(['train','progress','guides','settings'].includes(ui.tab))o.ui={tab:ui.tab};
+    return o}
   let d=defaults();
   try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j)d=norm(j)}catch(e){}
-  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}};
+  /* 0.27 : un échec d’écriture (stockage plein ou bloqué) n’est plus silencieux : avertissement une fois par session. */
+  let saveWarned=false;
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(d));return true}catch(e){
+    if(!saveWarned){saveWarned=true;setTimeout(()=>{try{alert('Enregistrement impossible sur ce téléphone (stockage plein ou bloqué). Exporte ta sauvegarde (Réglages > Sauvegarde) avant de continuer.')}catch(x){}},0)}return false}};
+  /* Demande un stockage persistant (le navigateur ne l’efface pas pour faire de la place). Sans effet si refusé. */
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persisted().then(p=>{if(!p)navigator.storage.persist()}).catch(()=>{})}catch(e){}
   const today=()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')};
   const doneSets=a=>(a||[]).filter(s=>s&&s.done);
   const snap=id=>EX[id]?{en:EX[id].en,fr:EX[id].fr,kind:EX[id].kind}:null;
@@ -121,7 +154,7 @@ const Store=(()=>{
   return{d,save,today,get,setSet,pickGet,pickSet,noteGet,noteSet,strGet,strToggle,durGet,durSet,dates,history,last,sessions,trackedIds,lastDate,info,tracked,sessTitle,videoId,parseYt,undoInfo,undo,countDone,sessionDates,resetSession,deleteSession,
     exportJson:()=>JSON.stringify({app:'gym-guide',version:2,exported:new Date().toISOString(),data:d},null,1),
     importJson:t=>{const j=JSON.parse(t);if(!j||j.app!=='gym-guide'||!j.data||typeof j.data.log!=='object')throw new Error('format');
-      stash('avant import');d=norm(j.data);Store.d=d;migrate();save()},
+      stash('avant import');d=norm(clean(j.data));Store.d=d;migrate();save()},
     clearLog:()=>{stash('avant effacement');d.log={};d.pick={};d.meta.sess={};Store.d=d;save()},
     reset:()=>{stash('avant réinitialisation');d=defaults();Store.d=d;save()}};
 })();

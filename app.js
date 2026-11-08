@@ -15,9 +15,20 @@ const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.te
 
 /* Zone visible (iOS laisse parfois la page décalée après le clavier ou un défilement) : le corps suit la zone visible, la barre d’onglets se masque pendant la saisie. */
 (()=>{const vv=window.visualViewport,r=document.documentElement.style;
-  const fit=()=>{if(!vv)return;const kb=window.innerHeight-vv.height>120&&vv.scale<=1.01;
-    if(kb){r.setProperty('--vvt',Math.round(vv.offsetTop)+'px');r.setProperty('--vvb',Math.round(window.innerHeight-vv.offsetTop-vv.height)+'px')}
-    else{r.removeProperty('--vvt');r.removeProperty('--vvb')}};
+  /* 0.27 : en mode app (écran d’accueil), iOS peut annoncer une hauteur de fenêtre trop courte (bande vide sous la barre d’onglets sur iPhone 11).
+     L’app occupe alors tout l’écran : on prend la hauteur de l’écran dans l’orientation courante. */
+  const standalone=()=>navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  /* Marge iOS du bas (barre d’accueil), lue par une sonde CSS. */
+  const safeB=()=>{const s=document.createElement('div');s.style.cssText='position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
+    document.documentElement.appendChild(s);const h=s.getBoundingClientRect().height;s.remove();return h};
+  /* Correction seulement en mode app ET si iOS annonce une barre d’accueil (la vue web va donc jusqu’au bord de l’écran). */
+  const appH=()=>{let h=window.innerHeight;if(standalone()&&safeB()>0&&screen&&screen.width&&screen.height){const port=window.innerHeight>=window.innerWidth;
+    h=Math.max(h,port?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height))}return h};
+  window.layoutInfo=()=>'fenêtre '+window.innerHeight+' · écran '+screen.height+' · zone visible '+(vv?Math.round(vv.height):'–')+' · marge bas '+Math.round(safeB())+' · app '+(standalone()?'oui':'non')+' · hauteur utilisée '+appH();
+  const fit=()=>{r.setProperty('--apph',appH()+'px');if(!vv)return;const kb=window.innerHeight-vv.height>120&&vv.scale<=1.01;
+    if(kb){r.setProperty('--vvt',Math.round(vv.offsetTop)+'px');r.setProperty('--vvh',Math.round(vv.height)+'px')}
+    else{r.removeProperty('--vvt');r.removeProperty('--vvh')}};
+  window.addEventListener('resize',fit);
   if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}fit();
   const typing=t=>!!t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
   document.addEventListener('focusin',e=>{if(typing(e.target))document.body.classList.add('kb')});
@@ -183,7 +194,7 @@ function viewStation(sess,si){
     const cls='set'+(s.done?' done':'')+(kind==='tick'?' t1':'')+(!s.done&&k===firstOpen?' cur':'');
     sets+=`<div class="${cls}"><span class="n">${k+1}</span>`+
      (kind==='tick'?`<span>${esc(it.reps)}</span>`:
-      `<div><label for="r${k}">${kind==='time'?'Durée (s)':'Reps'}</label><input id="r${k}" inputmode="numeric" pattern="[0-9]*" value="${esc(r)}" placeholder="${ps&&ps.reps!=null?ps.reps:first(it.reps)}" data-act="inp"></div>`+
+      `<div><label for="r${k}">${kind==='time'?'Durée (s)':'Reps'}</label><input id="r${k}" inputmode="numeric" pattern="[0-9]*" value="${esc(r)}" placeholder="${esc(ps&&ps.reps!=null?ps.reps:first(it.reps))}" data-act="inp"></div>`+
       (kind==='time'?`<button class="go" data-act="cd" data-k="${k}" aria-label="Lancer le minuteur de la série ${k+1}">▶</button>`:kind==='reps'?`<div class="mute small"></div>`:`<div><label for="w${k}">${kind==='assist'?'Assist. kg':'kg'}</label><input id="w${k}" inputmode="decimal" value="${esc(w)}" placeholder="${ps&&ps.kg!=null?esc(ps.kg):'kg'}" data-act="inp"></div>`))+
      `<button class="ok" data-act="tick" data-k="${k}" aria-pressed="${!!s.done}" aria-label="Série ${k+1} faite">✓</button></div>`;
   }
